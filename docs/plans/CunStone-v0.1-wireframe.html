@@ -1,0 +1,1528 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>CunStone v0.1 低保真线框图</title>
+  <style>
+    :root {
+      --ink: #111111;
+      --mid: #666666;
+      --line: #8f8f8f;
+      --soft: #f4f4f4;
+      --fill: #e8e8e8;
+      --paper: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: #d9d9d9;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    body {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .sheet {
+      width: min(1560px, calc(100% - 48px));
+      margin: 24px auto;
+      padding: 30px;
+      background: var(--paper);
+      border: 1px solid var(--ink);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+      font-size: 30px;
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+    }
+
+    h2 {
+      margin-bottom: 12px;
+      font-size: 18px;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .eyebrow {
+      margin-bottom: 12px;
+      color: var(--mid);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      max-width: 980px;
+      margin-bottom: 14px;
+      color: #333333;
+      font-size: 14px;
+    }
+
+    .meta,
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      align-items: center;
+    }
+
+    .meta {
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--mid);
+      font-size: 12px;
+    }
+
+    .legend {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border: 1px dashed var(--line);
+      background: var(--soft);
+      color: var(--mid);
+      font-size: 12px;
+    }
+
+    .legend strong {
+      color: var(--ink);
+    }
+
+    .section {
+      margin-top: 24px;
+    }
+
+    .section-heading {
+      display: flex;
+      gap: 16px;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--ink);
+    }
+
+    .section-heading h2 {
+      margin-bottom: 0;
+    }
+
+    .section-heading .hint {
+      color: var(--mid);
+      font-size: 11px;
+      text-align: right;
+    }
+
+    .flow-board {
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: #fafafa;
+    }
+
+    .flow-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .flow-line + .flow-line {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #bbbbbb;
+    }
+
+    .flow-step {
+      min-width: 150px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--ink);
+      background: var(--paper);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .flow-step small {
+      display: block;
+      margin-top: 3px;
+      color: var(--mid);
+      font-size: 10px;
+      font-weight: 400;
+    }
+
+    .flow-arrow {
+      color: var(--mid);
+      font-size: 19px;
+      font-weight: 700;
+    }
+
+    .flow-label {
+      padding: 3px 7px;
+      border: 1px dashed var(--line);
+      color: var(--mid);
+      font-size: 10px;
+    }
+
+    .flow-rules {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .flow-rule {
+      padding: 10px;
+      border: 1px dashed #aaaaaa;
+      background: var(--paper);
+      color: #444444;
+      font-size: 11px;
+    }
+
+    .flow-rule strong {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--ink);
+    }
+
+    .screen-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+      align-items: start;
+    }
+
+    .screen {
+      overflow: hidden;
+      border: 1.5px solid var(--ink);
+      background: var(--paper);
+    }
+
+    .screen[aria-labelledby="p1-title"] { order: 1; }
+    .screen[aria-labelledby="p2-title"] { order: 2; }
+    .screen[aria-labelledby="p3-title"] { order: 3; }
+    .screen[aria-labelledby="p4-title"] { order: 4; }
+
+    .browser-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--ink);
+      background: var(--fill);
+    }
+
+    .browser-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .browser-dots span {
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--ink);
+      border-radius: 50%;
+      background: var(--paper);
+    }
+
+    .browser-route {
+      flex: 1;
+      padding: 3px 8px;
+      border: 1px solid #999999;
+      background: var(--paper);
+      color: var(--mid);
+      font-size: 10px;
+    }
+
+    .screen-title {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px dashed var(--line);
+    }
+
+    .screen-title strong {
+      font-size: 16px;
+    }
+
+    .screen-title span {
+      color: var(--mid);
+      font-size: 10px;
+      text-align: right;
+    }
+
+    .screen-body {
+      min-height: 520px;
+      padding: 16px;
+    }
+
+    .screen-body.editor-body {
+      min-height: 820px;
+    }
+
+    .screen-body.export-body {
+      min-height: 620px;
+    }
+
+    .panel {
+      border: 1px dashed #999999;
+      background: #fbfbfb;
+    }
+
+    .panel-pad {
+      padding: 12px;
+    }
+
+    .muted {
+      color: var(--mid);
+    }
+
+    .note {
+      color: var(--mid);
+      font-size: 10px;
+    }
+
+    .field {
+      padding: 9px 10px;
+      border: 1px dashed #999999;
+      background: var(--paper);
+      color: var(--mid);
+    }
+
+    .field + .field,
+    .field-row + .field,
+    .field + .field-row {
+      margin-top: 9px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: stretch;
+      margin-top: 9px;
+    }
+
+    .btn {
+      display: inline-flex;
+      min-height: 35px;
+      padding: 8px 12px;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid var(--ink);
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .btn.primary {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .btn.block {
+      width: 100%;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      padding: 4px 8px;
+      border: 1px solid #999999;
+      background: var(--paper);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .chip.active {
+      border-color: var(--ink);
+      background: var(--fill);
+      font-weight: 700;
+    }
+
+    .bulk-select {
+      display: inline-flex;
+      gap: 5px;
+      align-items: center;
+      padding: 4px 8px;
+      border: 1px solid #999999;
+      background: var(--paper);
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .bulk-select .checkbox {
+      width: 10px;
+      height: 10px;
+      line-height: 8px;
+    }
+
+    .select-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: flex-start;
+    }
+
+    .select-count {
+      padding-left: 2px;
+      color: var(--mid);
+      font-size: 9px;
+    }
+
+    .login-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 28px;
+      align-items: start;
+      padding: 12px 4px;
+    }
+
+    .login-context {
+      min-height: 360px;
+      padding: 22px;
+      border: 1px dashed #999999;
+      background: #fafafa;
+    }
+
+    .brand-placeholder {
+      display: flex;
+      width: 180px;
+      height: 180px;
+      margin-bottom: 24px;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--ink);
+      color: var(--mid);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .login-card {
+      padding: 22px;
+      border: 1.5px solid var(--ink);
+      background: var(--paper);
+    }
+
+    .login-card h3 {
+      margin-bottom: 14px;
+      font-size: 18px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .page-exit {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px dashed #aaaaaa;
+      color: var(--mid);
+      font-size: 10px;
+    }
+
+    .works-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding: 9px 10px;
+      border: 1px dashed #999999;
+      background: var(--soft);
+    }
+
+    .works-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .work-card {
+      position: relative;
+      padding: 9px;
+      border: 1px solid #999999;
+      background: var(--paper);
+    }
+
+    .work-select {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--ink);
+      background: var(--paper);
+      font-size: 9px;
+      line-height: 12px;
+      text-align: center;
+    }
+
+    .work-thumb {
+      display: flex;
+      height: 118px;
+      margin-bottom: 9px;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed #aaaaaa;
+      background: #f5f5f5;
+    }
+
+    .seal-outline {
+      width: 66px;
+      height: 66px;
+      border: 3px double var(--ink);
+      background: var(--paper);
+    }
+
+    .seal-outline.round {
+      border-radius: 50%;
+    }
+
+    .work-title {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    .work-title .mark {
+      padding: 1px 5px;
+      border: 1px solid #999999;
+      color: var(--mid);
+      font-size: 9px;
+      font-weight: 400;
+    }
+
+    .work-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: space-between;
+      margin-top: 8px;
+      color: var(--mid);
+      font-size: 10px;
+    }
+
+    .works-foot {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed #aaaaaa;
+      color: var(--mid);
+      font-size: 10px;
+    }
+
+    .works-stage {
+      position: relative;
+      min-height: 342px;
+    }
+
+    .work-preview {
+      border-bottom: 1px solid var(--ink);
+      font-weight: 700;
+    }
+
+    .work-select.disabled {
+      border-color: #bbbbbb;
+      background: #eeeeee;
+      color: #999999;
+    }
+
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    .preview-modal {
+      width: min(520px, 100%);
+      border: 1.5px solid var(--ink);
+      background: var(--paper);
+      box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .modal-head,
+    .modal-foot {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+    }
+
+    .modal-head {
+      border-bottom: 1px solid var(--ink);
+    }
+
+    .modal-foot {
+      border-top: 1px dashed #aaaaaa;
+    }
+
+    .modal-previews {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .editor-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .name-field {
+      display: flex;
+      min-width: 250px;
+      flex: 1;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 9px;
+      border: 1px dashed #999999;
+      background: var(--paper);
+    }
+
+    .name-field span {
+      color: var(--mid);
+      font-size: 9px;
+      white-space: nowrap;
+    }
+
+    .name-field strong {
+      flex: 1;
+      font-size: 11px;
+    }
+
+    .editor-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 235px minmax(0, 1fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .editor-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tool-block {
+      padding: 9px;
+      border: 1px dashed #aaaaaa;
+      background: var(--paper);
+    }
+
+    .tool-block h3 {
+      margin-bottom: 6px;
+      font-size: 10px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .mini-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .mini-field {
+      padding: 5px 7px;
+      border: 1px dashed #aaaaaa;
+      color: var(--mid);
+      font-size: 9px;
+    }
+
+    .editor-main {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      border: 1px dashed #999999;
+      background: #fafafa;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 8px;
+      border-bottom: 1px dashed #aaaaaa;
+    }
+
+    .tool-chip {
+      padding: 4px 7px;
+      border: 1px solid #999999;
+      background: var(--paper);
+      font-size: 9px;
+    }
+
+    .canvas-area {
+      display: flex;
+      flex: 1;
+      min-height: 580px;
+      padding: 20px;
+      align-items: center;
+      justify-content: center;
+      background:
+        linear-gradient(#f0f0f0 1px, transparent 1px),
+        linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
+      background-size: 18px 18px;
+    }
+
+    .canvas-seal {
+      position: relative;
+      display: flex;
+      width: 360px;
+      height: 360px;
+      align-items: center;
+      justify-content: center;
+      border: 5px double var(--ink);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .canvas-seal::before,
+    .canvas-seal::after {
+      content: "";
+      position: absolute;
+      border: 1px solid #777777;
+    }
+
+    .canvas-seal::before {
+      inset: 34px;
+    }
+
+    .canvas-seal::after {
+      width: 88px;
+      height: 88px;
+      border: 2px solid var(--ink);
+    }
+
+    .click-marker {
+      position: absolute;
+      top: 22px;
+      right: 22px;
+      padding: 3px 6px;
+      border: 1px dashed var(--ink);
+      background: var(--paper);
+      font-size: 9px;
+    }
+
+    .canvas-foot {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      padding: 8px;
+      border-top: 1px dashed #aaaaaa;
+      color: var(--mid);
+      font-size: 9px;
+    }
+
+    .preview-box {
+      min-height: 112px;
+      padding: 8px;
+      border: 1px dashed #999999;
+      background: var(--paper);
+    }
+
+    .preview-box strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 10px;
+    }
+
+    .preview-art {
+      display: flex;
+      height: 75px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #aaaaaa;
+      background: #f3f3f3;
+    }
+
+    .preview-art .mini-seal {
+      width: 46px;
+      height: 46px;
+      border: 2px solid var(--ink);
+    }
+
+    .preview-art.red-preview {
+      background:
+        repeating-linear-gradient(
+          -45deg,
+          #d8d8d8,
+          #d8d8d8 4px,
+          #f3f3f3 4px,
+          #f3f3f3 8px
+        );
+    }
+
+    .save-state {
+      padding: 7px 8px;
+      border: 1px dashed #999999;
+      background: var(--soft);
+      color: var(--mid);
+      font-size: 9px;
+    }
+
+    .editor-boundary {
+      margin-top: 8px;
+      color: var(--mid);
+      font-size: 9px;
+    }
+
+    .export-layout {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 10px;
+      min-height: 620px;
+    }
+
+    .export-list {
+      padding: 10px;
+      border: 1px dashed #999999;
+      background: #fbfbfb;
+    }
+
+    .export-item {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      padding: 7px;
+      border: 1px solid #bbbbbb;
+      background: var(--paper);
+      font-size: 9px;
+    }
+
+    .export-item + .export-item {
+      margin-top: 7px;
+    }
+
+    .checkbox {
+      flex: 0 0 auto;
+      width: 12px;
+      height: 12px;
+      border: 1px solid var(--ink);
+      background: var(--paper);
+      font-size: 8px;
+      line-height: 10px;
+      text-align: center;
+    }
+
+    .a4-stage {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 14px;
+      border: 1px dashed #999999;
+      background: #f2f2f2;
+    }
+
+    .layout-toolbar {
+      display: flex;
+      width: 100%;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 10px;
+      padding: 7px;
+      border: 1px dashed #999999;
+      background: var(--paper);
+    }
+
+    .layout-tool {
+      padding: 3px 7px;
+      border: 1px solid #999999;
+      background: var(--paper);
+      font-size: 9px;
+    }
+
+    .add-works-backdrop {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      background: rgba(0, 0, 0, 0.24);
+    }
+
+    .add-works-modal {
+      width: min(510px, 100%);
+      border: 1.5px solid var(--ink);
+      background: var(--paper);
+      box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .add-works-head,
+    .add-works-foot {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 11px;
+    }
+
+    .add-works-head {
+      border-bottom: 1px solid var(--ink);
+    }
+
+    .add-works-foot {
+      border-top: 1px dashed #aaaaaa;
+      font-size: 9px;
+    }
+
+    .add-works-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      padding: 11px;
+    }
+
+    .add-work-option {
+      display: grid;
+      grid-template-columns: 14px 1fr;
+      gap: 7px;
+      padding: 8px;
+      border: 1px solid #999999;
+      background: var(--paper);
+    }
+
+    .add-work-option .checkbox {
+      margin-top: 2px;
+    }
+
+    .add-work-thumb {
+      display: flex;
+      height: 76px;
+      margin-bottom: 6px;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed #aaaaaa;
+      background: #f5f5f5;
+    }
+
+    .add-work-thumb .seal-outline {
+      width: 42px;
+      height: 42px;
+      border-width: 2px;
+    }
+
+    .add-work-name {
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .added-count {
+      margin-top: 10px;
+      padding: 7px 8px;
+      border: 1px solid #999999;
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .layout-tool.active {
+      background: var(--fill);
+      font-weight: 700;
+    }
+
+    .a4-sheet {
+      position: relative;
+      width: min(385px, 100%);
+      aspect-ratio: 210 / 297;
+      padding: 22px;
+      border: 1px solid var(--ink);
+      background: var(--paper);
+    }
+
+    .a4-seal {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--ink);
+      background: var(--paper);
+      color: var(--mid);
+      font-size: 8px;
+      text-align: center;
+    }
+
+    .a4-seal.selected {
+      border-style: dashed;
+      outline: 1px dashed var(--ink);
+      outline-offset: 4px;
+    }
+
+    .a4-seal.square {
+      top: 50px;
+      left: 44px;
+      width: 82px;
+      height: 82px;
+    }
+
+    .a4-seal.round {
+      top: 55px;
+      right: 50px;
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+    }
+
+    .a4-seal.rectangle {
+      top: 185px;
+      left: 100px;
+      width: 112px;
+      height: 64px;
+    }
+
+    .dimension-label {
+      position: absolute;
+      bottom: -15px;
+      left: 0;
+      width: 100%;
+      color: var(--mid);
+      font-size: 7px;
+      text-align: center;
+    }
+
+    .crop-corner {
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      border-color: var(--ink);
+      border-style: solid;
+    }
+
+    .crop-corner.tl {
+      top: -4px;
+      left: -4px;
+      border-width: 1px 0 0 1px;
+    }
+
+    .crop-corner.tr {
+      top: -4px;
+      right: -4px;
+      border-width: 1px 1px 0 0;
+    }
+
+    .crop-corner.bl {
+      bottom: -4px;
+      left: -4px;
+      border-width: 0 0 1px 1px;
+    }
+
+    .crop-corner.br {
+      right: -4px;
+      bottom: -4px;
+      border-width: 0 1px 1px 0;
+    }
+
+    .page-switcher {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+      font-size: 9px;
+    }
+
+    .export-footer {
+      display: flex;
+      width: 100%;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding-top: 9px;
+      border-top: 1px dashed #aaaaaa;
+    }
+
+    .setting-row {
+      padding: 7px 0;
+      border-bottom: 1px dashed #bbbbbb;
+      font-size: 9px;
+    }
+
+    .setting-row:last-of-type {
+      border-bottom: 0;
+    }
+
+    .setting-row strong {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 9px;
+    }
+
+    .export-actions {
+      margin-top: 18px;
+    }
+
+    .footer-note {
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--mid);
+      font-size: 10px;
+    }
+
+    @media (max-width: 1120px) {
+      .screen-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .editor-layout,
+      .export-layout {
+        grid-template-columns: 180px minmax(0, 1fr);
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .sheet {
+        width: 100%;
+        margin: 0;
+        padding: 12mm;
+        border: 0;
+      }
+
+      .screen {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <header>
+      <div class="eyebrow">CunStone / v0.1 / Low-fidelity wireframe</div>
+      <h1>篆刻印稿转印工具 · 页面结构与用户路径</h1>
+      <p class="lede">
+        本线框图只用于确认页面结构、内容分区和用户路径，不代表最终视觉样式、交互细节或前端实现。
+      </p>
+      <div class="meta">
+        <span>依据：CunStone v0.1 软件发展蓝图草案及线框评审调整</span>
+        <span>日期：2026-10-26</span>
+        <span>4 个核心页面</span>
+        <span>电脑浏览器</span>
+      </div>
+    </header>
+
+    <section class="legend" aria-label="图例">
+      <span><strong>实线框：</strong>页面或明确内容区域</span>
+      <span><strong>虚线框：</strong>输入区、列表项或待填充占位</span>
+      <span><strong>箭头：</strong>页面跳转或主流程方向</span>
+      <span><strong>说明：</strong>灰阶展示，无品牌、插画和视觉设计</span>
+    </section>
+
+    <section class="section" aria-labelledby="flow-title">
+      <div class="section-heading">
+        <h2 id="flow-title">用户路径总览</h2>
+        <span class="hint">P1–P4 对应下方四个页面线框</span>
+      </div>
+      <div class="flow-board">
+        <div class="flow-line">
+          <div class="flow-step">P1 登录 / 注册<small>手机号 + 验证码</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-step">P2 创作编辑<small>登录后直接进入</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-step">编辑页操作<small>草稿 / 保存（已完成） / A4 导出</small></div>
+        </div>
+        <div class="flow-line">
+          <div class="flow-step">P2 保存后进入 P3<small>作品列表：全部 / 已完成 / 草稿</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-step">P3 作品预览<small>红印与黑白稿以弹窗展示</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-step">P4 选择已完成作品<small>多选添加、手动排版</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-step">下载黑白 PDF<small>流程结束</small></div>
+        </div>
+        <div class="flow-rules">
+          <div class="flow-rule"><strong>登录直达编辑</strong>P1 登录成功后直接进入 P2。</div>
+          <div class="flow-rule"><strong>P3 作品管理</strong>已完成页支持“一件全选”、删除，以及红印/黑白预览弹窗。</div>
+          <div class="flow-rule"><strong>P4 添加作品</strong>通过弹窗多选已完成作品，确定后显示总添加数量。</div>
+          <div class="flow-rule"><strong>手动排版</strong>P4 提供拖动、旋转、间距和翻页操作。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="screens-title">
+      <div class="section-heading">
+        <h2 id="screens-title">核心页面线框</h2>
+        <span class="hint">页面结构优先于控件细节</span>
+      </div>
+
+      <div class="screen-grid">
+        <article class="screen" aria-labelledby="p1-title">
+          <div class="browser-bar">
+            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="browser-route">cunstone.app / login</div>
+          </div>
+          <div class="screen-title">
+            <strong id="p1-title">P1 · 登录 / 注册页</strong>
+            <span>入口：未登录<br>出口：P2 创作编辑页</span>
+          </div>
+          <div class="screen-body">
+            <div class="login-layout">
+              <div class="login-context">
+                <div class="brand-placeholder">工具名称 / 标识<br>占位区</div>
+                <h3>产品说明占位</h3>
+                <p class="muted">上传已有画面，制作可打印、可转印的黑白印稿。</p>
+                <p class="note">未登录用户不能访问作品、编辑或导出页面。</p>
+              </div>
+              <div class="login-card">
+                <h3>手机号登录</h3>
+                <div class="field">手机号输入框</div>
+                <div class="field-row">
+                  <div class="field">验证码输入框</div>
+                  <div class="btn">获取验证码</div>
+                </div>
+                <div class="btn primary block" style="margin-top: 14px;">登录 / 注册</div>
+                <p class="note" style="margin: 10px 0 0;">手机号验证码为唯一登录方式。</p>
+              </div>
+            </div>
+            <div class="page-exit">登录成功后直接进入 P2 创作编辑页；作品列表可从编辑页进入。</div>
+          </div>
+        </article>
+
+        <article class="screen" aria-labelledby="p3-title">
+          <div class="browser-bar">
+            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="browser-route">cunstone.app / works</div>
+          </div>
+          <div class="screen-title">
+            <strong id="p3-title">P3 · 作品列表页</strong>
+            <span>入口：P2 返回作品列表<br>出口：P2 继续编辑 / P4 导出</span>
+          </div>
+          <div class="screen-body">
+            <div class="works-toolbar">
+              <div class="chip-row">
+                <span class="chip">全部作品</span>
+                <span class="chip active">已完成</span>
+                <span class="chip">草稿</span>
+              </div>
+              <div class="chip-row">
+                <div class="select-stack">
+                  <span class="bulk-select"><span class="checkbox">✓</span>一件全选</span>
+                  <span class="select-count">已选 2 项</span>
+                </div>
+                <span class="btn">删除</span>
+                <span class="btn">A4 导出</span>
+                <span class="btn primary">新建作品</span>
+              </div>
+            </div>
+
+            <div class="works-stage">
+              <div class="works-grid">
+                <div class="work-card">
+                  <div class="work-select" aria-label="选择已完成作品">✓</div>
+                  <div class="work-thumb"><div class="seal-outline"></div></div>
+                  <div class="work-title"><span>作品 A</span><span class="mark">已完成</span></div>
+                  <div class="note">最后保存 10:24</div>
+                  <div class="work-actions"><span class="work-preview">预览</span><span>继续编辑 →</span></div>
+                </div>
+                <div class="work-card">
+                  <div class="work-select" aria-label="选择已完成作品">✓</div>
+                  <div class="work-thumb"><div class="seal-outline round"></div></div>
+                  <div class="work-title"><span>作品 D</span><span class="mark">已完成</span></div>
+                  <div class="note">最后保存 10-24</div>
+                  <div class="work-actions"><span class="work-preview">预览</span><span>继续编辑 →</span></div>
+                </div>
+              </div>
+
+              <div class="modal-backdrop">
+                <div class="preview-modal" role="dialog" aria-label="作品预览弹窗">
+                  <div class="modal-head">
+                    <strong>作品预览 · 作品 A</strong>
+                    <span class="btn">关闭</span>
+                  </div>
+                  <div class="modal-previews">
+                    <div class="preview-box">
+                      <strong>红印效果（线上）</strong>
+                      <div class="preview-art red-preview"><div class="mini-seal"></div></div>
+                    </div>
+                    <div class="preview-box">
+                      <strong>黑白印稿</strong>
+                      <div class="preview-art"><div class="mini-seal"></div></div>
+                    </div>
+                  </div>
+                  <div class="modal-foot">
+                    <span class="note">由作品卡片的“预览”打开；不进入 PDF</span>
+                    <span class="btn primary">继续编辑</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="works-foot">
+              <span>当前为“已完成”筛选；点击“预览”打开弹窗。</span>
+              <span>“一件全选”下方显示已选数量，支持删除已选作品。</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen" aria-labelledby="p2-title">
+          <div class="browser-bar">
+            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="browser-route">cunstone.app / editor</div>
+          </div>
+          <div class="screen-title">
+            <strong id="p2-title">P2 · 创作编辑页</strong>
+            <span>入口：P1 登录直达 / P3 继续编辑<br>出口：P3 或 P4</span>
+          </div>
+          <div class="screen-body editor-body">
+            <div class="editor-header">
+              <div class="name-field">
+                <span>作品名称</span>
+                <strong>未命名作品</strong>
+                <span>点击名称可编辑</span>
+              </div>
+              <div class="editor-actions">
+                <span class="btn">作品列表</span>
+                <span class="btn">草稿</span>
+                <span class="btn primary">保存（已完成）</span>
+                <span class="btn">A4 导出</span>
+              </div>
+            </div>
+            <div class="editor-layout">
+              <aside class="editor-sidebar" aria-label="编辑工具">
+                <div class="tool-block">
+                  <h3>01 外形与实际尺寸</h3>
+                  <div class="chip-row">
+                    <span class="chip active">正方形</span>
+                    <span class="chip">长方形</span>
+                    <span class="chip">圆形</span>
+                    <span class="chip">自定义</span>
+                  </div>
+                  <div class="mini-fields">
+                    <div class="mini-field">宽 mm</div>
+                    <div class="mini-field">高 mm</div>
+                  </div>
+                  <p class="note" style="margin: 6px 0 0;">系统推荐，可手动修改</p>
+                </div>
+
+                <div class="tool-block">
+                  <h3>02 输入完整画面</h3>
+                  <div class="chip-row">
+                    <span class="chip">上传图片</span>
+                    <span class="chip">手绘画布</span>
+                  </div>
+                  <p class="note" style="margin: 6px 0 0;">不支持在系统内拼排多个元素</p>
+                </div>
+
+                <div class="tool-block">
+                  <h3>03 纯色背景去除</h3>
+                  <p class="note" style="margin: 0;">在画布中点击背景区域</p>
+                  <div class="mini-field" style="margin-top: 6px;">已选背景色：待点选</div>
+                  <p class="note" style="margin: 6px 0 0;">仅支持纯色背景，不处理复杂照片</p>
+                </div>
+
+                <div class="tool-block">
+                  <h3>04 效果与适配</h3>
+                  <div class="chip-row">
+                    <span class="chip active">实心剪影</span>
+                    <span class="chip">轮廓线稿</span>
+                  </div>
+                  <p class="note" style="margin: 6px 0 0;">自动缩放、旋转、锐化、矫形</p>
+                </div>
+
+                <div class="tool-block">
+                  <h3>05 黑白稿编辑</h3>
+                  <div class="chip-row">
+                    <span class="chip">画笔</span>
+                    <span class="chip">橡皮</span>
+                    <span class="chip">撤销</span>
+                    <span class="chip">重做</span>
+                    <span class="chip">放大</span>
+                    <span class="chip">线宽</span>
+                  </div>
+                </div>
+
+                <div class="tool-block">
+                  <h3>06 阴 / 阳刻与边框</h3>
+                  <div class="chip-row">
+                    <span class="chip active">阳刻</span>
+                    <span class="chip">阴刻</span>
+                    <span class="chip">正常</span>
+                    <span class="chip">左右镜像</span>
+                  </div>
+                  <div class="mini-field" style="margin-top: 6px;">边框：单线 / 粗线 / 双线 / 残破边 / 无</div>
+                </div>
+              </aside>
+
+              <section class="editor-main" aria-label="画布">
+                <div class="editor-toolbar">
+                  <span class="tool-chip">撤销</span>
+                  <span class="tool-chip">重做</span>
+                  <span class="tool-chip">放大</span>
+                  <span class="tool-chip">画笔</span>
+                  <span class="tool-chip">橡皮</span>
+                  <span class="tool-chip">线宽</span>
+                </div>
+                <div class="canvas-area">
+                  <div class="canvas-seal">
+                    <span class="click-marker">点击背景去底</span>
+                  </div>
+                </div>
+                <div class="canvas-foot">
+                  <span>黑白约定：黑色 = 保留石头；白色 = 刻掉</span>
+                  <span>仅提供 1:1 视觉预览，不显示自动可刻性检查</span>
+                  <span>自动保存状态：已保存 10:24</span>
+                </div>
+              </section>
+            </div>
+            <p class="editor-boundary">红印与黑白稿预览已移至 P3 作品列表的预览弹窗；A4 导出页只能添加已完成作品。</p>
+          </div>
+        </article>
+
+        <article class="screen" aria-labelledby="p4-title">
+          <div class="browser-bar">
+            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="browser-route">cunstone.app / export/a4</div>
+          </div>
+          <div class="screen-title">
+            <strong id="p4-title">P4 · A4 导出页</strong>
+            <span>入口：P2 A4 导出 / P3 已完成作品<br>出口：下载 PDF</span>
+          </div>
+          <div class="screen-body export-body">
+            <div class="export-layout">
+              <aside class="export-list" aria-label="已添加作品列表">
+                <h3>已添加作品列表</h3>
+                <div class="export-item"><span>作品 A · 25×25 mm</span></div>
+                <div class="export-item"><span>作品 D · Ø30 mm</span></div>
+                <div class="btn block" style="margin-top: 10px;">添加作品</div>
+                <div class="added-count">共添加 2 件作品</div>
+                <p class="note" style="margin: 10px 0 0;">点击“添加作品”打开已完成作品弹窗；草稿不可添加。</p>
+              </aside>
+
+              <section class="a4-stage" aria-label="A4 排版预览">
+                <div class="layout-toolbar" aria-label="手动排版工具">
+                  <span class="layout-tool">自动排版</span>
+                  <span class="layout-tool active">手动拖动</span>
+                  <span class="layout-tool">旋转</span>
+                  <span class="layout-tool">水平间距</span>
+                  <span class="layout-tool">垂直间距</span>
+                </div>
+                <div class="a4-sheet">
+                  <div class="a4-seal square selected">
+                    作品 A
+                    <span class="dimension-label">25 × 25 mm</span>
+                    <span class="crop-corner tl"></span>
+                    <span class="crop-corner tr"></span>
+                    <span class="crop-corner bl"></span>
+                    <span class="crop-corner br"></span>
+                  </div>
+                  <div class="a4-seal round">
+                    作品 D
+                    <span class="dimension-label">Ø30 mm</span>
+                    <span class="crop-corner tl"></span>
+                    <span class="crop-corner tr"></span>
+                    <span class="crop-corner bl"></span>
+                    <span class="crop-corner br"></span>
+                  </div>
+                </div>
+                <div class="page-switcher">
+                  <span class="btn">上一页</span>
+                  <span>第 1 / 1 页</span>
+                  <span class="btn">下一页</span>
+                </div>
+                <div class="export-footer">
+                  <span class="note">拖动印章调整位置；使用工具栏旋转或调整间距。PDF 仅黑白稿，即时生成不保存历史。</span>
+                  <span class="btn primary">下载 PDF</span>
+                </div>
+
+                <div class="add-works-backdrop">
+                  <div class="add-works-modal" role="dialog" aria-label="添加已完成作品弹窗">
+                    <div class="add-works-head">
+                      <strong>添加已完成作品</strong>
+                      <span class="btn">取消</span>
+                    </div>
+                    <div class="add-works-grid">
+                      <div class="add-work-option">
+                        <span class="checkbox">✓</span>
+                        <div>
+                          <div class="add-work-thumb"><div class="seal-outline"></div></div>
+                          <div class="add-work-name">作品 A</div>
+                          <div class="note">25×25 mm · 已完成</div>
+                        </div>
+                      </div>
+                      <div class="add-work-option">
+                        <span class="checkbox">✓</span>
+                        <div>
+                          <div class="add-work-thumb"><div class="seal-outline round"></div></div>
+                          <div class="add-work-name">作品 D</div>
+                          <div class="note">Ø30 mm · 已完成</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="add-works-foot">
+                      <span class="note">可多选；点击确定后返回 P4，并显示总添加作品数量。</span>
+                      <span class="btn primary">确定</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <p class="footer-note">
+      本文件为 CunStone v0.1 总览式低保真线框图，只表达页面结构和用户路径；不包含真实交互、业务逻辑、视觉设计或正式前端代码。
+    </p>
+  </main>
+</body>
+</html>
