@@ -1,0 +1,47 @@
+import { useEffect, useState } from "react";
+
+import { getActiveUser, signOut } from "./features/auth/authService";
+import { navigate, useHashRoute } from "./app/router";
+import EditorPage from "./pages/EditorPage";
+import LoginPage from "./pages/LoginPage";
+import { readAppState } from "./lib/storage/appStorage";
+
+export default function App() {
+  const route = useHashRoute();
+  const activeUser = getActiveUser();
+  const [initialRead] = useState(() => readAppState());
+  const storageNotice =
+    initialRead.recovery === "corrupt"
+      ? "本地数据无法读取，已使用空数据启动。"
+      : initialRead.recovery === "unsupported-version"
+        ? "本地数据版本不兼容，已使用空数据启动。"
+        : undefined;
+
+  useEffect(() => {
+    if (route.name === "editor" && !activeUser) {
+      navigate("/login");
+    }
+  }, [activeUser, route.name]);
+
+  if (route.name === "editor" && activeUser) {
+    return (
+      <EditorPage
+        key={route.workId ?? "new"}
+        onSignOut={() => {
+          signOut();
+          navigate("/login");
+        }}
+        onStartNew={() => navigate("/editor/new")}
+        onWorkSaved={(workId) => navigate(`/editor/${workId}`)}
+        workId={route.workId}
+      />
+    );
+  }
+
+  return (
+    <LoginPage
+      onSuccess={() => navigate("/editor/new")}
+      storageNotice={storageNotice}
+    />
+  );
+}
