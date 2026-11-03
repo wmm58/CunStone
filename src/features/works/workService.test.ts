@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { createDefaultWorkImageState } from "../../domain/types";
 import { FIXED_TEST_CODE, loginWithFixedCode, signOut } from "../auth/authService";
 import {
   createWork,
@@ -43,6 +44,7 @@ describe("workService", () => {
         status: "draft",
         createdAt: "2026-11-02T10:01:00.000Z",
         lastSavedAt: "2026-11-02T10:01:00.000Z",
+        imageState: createDefaultWorkImageState(),
       },
     });
   });
@@ -88,6 +90,40 @@ describe("workService", () => {
         status: "completed",
         createdAt: "2026-11-02T10:01:00.000Z",
         lastSavedAt: "2026-11-02T10:05:00.000Z",
+        imageState: createDefaultWorkImageState(),
+      },
+    });
+  });
+
+  it("persists image processing state on an existing work", () => {
+    login("13800138000", "user-1");
+    createWork(
+      { name: "图片作品", status: "draft" },
+      { createId: () => "work-1" },
+    );
+    const imageState = {
+      ...createDefaultWorkImageState(),
+      sourceKind: "upload" as const,
+      sourceDataUrl: "data:image/png;base64,AAAA",
+      shape: "circle" as const,
+      widthMm: 30,
+      heightMm: 30,
+      backgroundColor: "#ffffff",
+      tolerance: 35,
+      effectMode: "outline" as const,
+    };
+
+    const result = updateWork(
+      "work-1",
+      { name: "图片作品", status: "draft", imageState },
+      { now: () => "2026-11-02T10:06:00.000Z" },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      work: {
+        imageState,
+        lastSavedAt: "2026-11-02T10:06:00.000Z",
       },
     });
   });

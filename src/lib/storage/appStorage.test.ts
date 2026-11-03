@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { createDefaultWorkImageState } from "../../domain/types";
 import {
   APP_STORAGE_KEY,
   clearAppState,
@@ -9,7 +10,7 @@ import {
 } from "./appStorage";
 
 const sampleState = {
-  version: 1 as const,
+  version: 2 as const,
   activeUserId: "user-1",
   users: [
     {
@@ -24,6 +25,23 @@ const sampleState = {
       ownerId: "user-1",
       name: "测试作品",
       status: "draft" as const,
+      createdAt: "2026-11-02T10:01:00.000Z",
+      lastSavedAt: "2026-11-02T10:02:00.000Z",
+      imageState: createDefaultWorkImageState(),
+    },
+  ],
+};
+
+const legacyState = {
+  version: 1,
+  activeUserId: "user-1",
+  users: sampleState.users,
+  works: [
+    {
+      id: "work-1",
+      ownerId: "user-1",
+      name: "测试作品",
+      status: "draft",
       createdAt: "2026-11-02T10:01:00.000Z",
       lastSavedAt: "2026-11-02T10:02:00.000Z",
     },
@@ -81,6 +99,23 @@ describe("appStorage", () => {
     expect(readAppState()).toEqual({
       state: createEmptyAppState(),
       recovery: "unsupported-version",
+    });
+  });
+
+  it("migrates v1 data without losing users, works, or the active account", () => {
+    window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(legacyState));
+
+    const result = readAppState();
+
+    expect(result.recovery).toBe("migrated");
+    expect(result.state.version).toBe(2);
+    expect(result.state.activeUserId).toBe("user-1");
+    expect(result.state.users).toEqual(sampleState.users);
+    expect(result.state.works[0]).toMatchObject({
+      id: "work-1",
+      name: "测试作品",
+      status: "draft",
+      imageState: createDefaultWorkImageState(),
     });
   });
 

@@ -1,4 +1,9 @@
-import type { WorkRecord, WorkStatus } from "../../domain/types";
+import {
+  createDefaultWorkImageState,
+  type WorkImageState,
+  type WorkRecord,
+  type WorkStatus,
+} from "../../domain/types";
 import { getActiveUser } from "../auth/authService";
 import { readAppState, writeAppState } from "../../lib/storage/appStorage";
 
@@ -13,6 +18,7 @@ interface WorkOptions {
 export interface WorkInput {
   name: string;
   status: WorkStatus;
+  imageState?: WorkImageState;
 }
 
 export type WorkResult =
@@ -40,6 +46,7 @@ export function createWork(input: WorkInput, options: WorkOptions = {}): WorkRes
     status: input.status,
     createdAt: timestamp,
     lastSavedAt: timestamp,
+    imageState: input.imageState ?? createDefaultWorkImageState(),
   };
   const state = readAppState(storage).state;
   state.works = [...state.works, work];
@@ -78,6 +85,7 @@ export function updateWork(
     ...state.works[index],
     name,
     status: input.status,
+    imageState: input.imageState ?? state.works[index].imageState,
     lastSavedAt: (options.now ?? now)(),
   };
   state.works = state.works.map((candidate, candidateIndex) =>

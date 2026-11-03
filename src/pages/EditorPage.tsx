@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 
-import type { WorkRecord, WorkStatus } from "../domain/types";
+import {
+  createDefaultWorkImageState,
+  type WorkImageState,
+  type WorkRecord,
+  type WorkStatus,
+} from "../domain/types";
+import ImagePreparationPanel from "../features/editor/ImagePreparationPanel";
 import {
   createWork,
   getActiveUserWork,
@@ -27,7 +33,11 @@ export default function EditorPage({
   const [work, setWork] = useState<WorkRecord | null>(null);
   const [name, setName] = useState("未命名作品");
   const [status, setStatus] = useState<WorkStatus>("draft");
+  const [imageState, setImageState] = useState<WorkImageState>(
+    createDefaultWorkImageState,
+  );
   const [dirty, setDirty] = useState(false);
+  const [imageDirty, setImageDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("new");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -42,6 +52,8 @@ export default function EditorPage({
       setWork(null);
       setName("未命名作品");
       setStatus("draft");
+      setImageState(createDefaultWorkImageState());
+      setImageDirty(false);
       setLastSavedAt(null);
       setSaveState("new");
       return;
@@ -57,12 +69,14 @@ export default function EditorPage({
     setWork(loaded);
     setName(loaded.name);
     setStatus(loaded.status);
+    setImageState(loaded.imageState);
     setLastSavedAt(loaded.lastSavedAt);
     setSaveState("saved");
+    setImageDirty(false);
   }, [workId]);
 
   useEffect(() => {
-    if (!work || !dirty) {
+    if (!work || (!dirty && !imageDirty)) {
       return;
     }
 
@@ -75,7 +89,7 @@ export default function EditorPage({
     const timer = window.setTimeout(() => {
       setSaveState("saving");
       try {
-        const result = updateWork(work.id, { name, status });
+        const result = updateWork(work.id, { name, status, imageState });
         if (!result.ok) {
           setSaveState("error");
           return;
@@ -83,8 +97,11 @@ export default function EditorPage({
         setWork(result.work);
         setName(result.work.name);
         setStatus(result.work.status);
+        setImageState(result.work.imageState);
         setLastSavedAt(result.work.lastSavedAt);
         setDirty(false);
+        setImageDirty(false);
+        setError("");
         setSaveState("saved");
       } catch {
         setSaveState("error");
@@ -92,12 +109,57 @@ export default function EditorPage({
     }, autosaveDelayMs);
 
     return () => window.clearTimeout(timer);
-  }, [autosaveDelayMs, dirty, name, status, work]);
+  }, [autosaveDelayMs, dirty, imageDirty, imageState, name, status, work]);
 
   function handleNameChange(nextName: string) {
     setName(nextName);
     setDirty(true);
     setError("");
+  }
+
+  function handleImageStateChange(next: WorkImageState) {
+    const trimmedName = name.trim();
+    const shouldPersistImmediately =
+      work &&
+      trimmedName &&
+      next.sourceDataUrl &&
+      next.sourceDataUrl !== imageState.sourceDataUrl;
+
+    if (shouldPersistImmediately) {
+      try {
+        const result = updateWork(work.id, {
+          name: trimmedName,
+          status,
+          imageState: next,
+        });
+        if (result.ok) {
+          setWork(result.work);
+          setImageState(result.work.imageState);
+          setLastSavedAt(result.work.lastSavedAt);
+          setImageDirty(false);
+          setSaveState("saved");
+          setError("");
+          return;
+        }
+        setSaveState("error");
+        setError(
+          result.error === "not-found"
+            ? "作品不存在或不属于当前本地账号"
+            : "保存失败，请重试",
+        );
+      } catch {
+        setSaveState("error");
+        setError("保存失败，请重试");
+      }
+    } else {
+      setError("");
+    }
+
+    setImageState(next);
+    setImageDirty(true);
+    if (!shouldPersistImmediately) {
+      setSaveState("unsaved");
+    }
   }
 
   function save(nextStatus: WorkStatus) {
@@ -112,8 +174,16 @@ export default function EditorPage({
     setSaveState("saving");
     try {
       const result = work
-        ? updateWork(work.id, { name: trimmedName, status: nextStatus })
-        : createWork({ name: trimmedName, status: nextStatus });
+        ? updateWork(work.id, {
+            name: trimmedName,
+            status: nextStatus,
+            imageState,
+          })
+        : createWork({
+            name: trimmedName,
+            status: nextStatus,
+            imageState,
+          });
 
       if (!result.ok) {
         setSaveState("error");
@@ -129,8 +199,10 @@ export default function EditorPage({
       setWork(result.work);
       setName(result.work.name);
       setStatus(result.work.status);
+      setImageState(result.work.imageState);
       setLastSavedAt(result.work.lastSavedAt);
       setDirty(false);
+      setImageDirty(false);
       setSaveState("saved");
 
       if (isNew) {
@@ -173,7 +245,7 @@ export default function EditorPage({
 
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-8">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-7xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="mb-1 text-xs font-semibold tracking-[0.16em] text-slate-500">
@@ -244,12 +316,12 @@ export default function EditorPage({
             </p>
           ) : null}
 
-          <section
-            aria-label="创作画布占位"
-            className="mt-6 flex min-h-96 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500"
-          >
-            P2 创作编辑页外壳
-          </section>
+          <div className="mt-6">
+            <ImagePreparationPanel
+              imageState={imageState}
+              onChange={handleImageStateChange}
+            />
+          </div>
         </section>
       </div>
     </main>
