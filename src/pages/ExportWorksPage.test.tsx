@@ -8,10 +8,18 @@ import { createWork } from "../features/works/workService";
 import { setExportWorkIds } from "../features/export/exportSession";
 import ExportWorksPage from "./ExportWorksPage";
 
+const { downloadPdfMock } = vi.hoisted(() => ({
+  downloadPdfMock: vi.fn(),
+}));
+
 vi.mock("../features/works/WorkPreviewCanvas", () => ({
   default: ({ work }: { work: { name: string } }) => (
     <div data-testid="work-preview">{work.name}</div>
   ),
+}));
+
+vi.mock("../features/export/pdfExport", () => ({
+  downloadA4Pdf: downloadPdfMock,
 }));
 
 function login() {
@@ -54,6 +62,8 @@ describe("ExportWorksPage", () => {
   beforeEach(() => {
     window.localStorage.clear();
     login();
+    downloadPdfMock.mockReset();
+    downloadPdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70]));
   });
 
   it("shows added works, count and adds completed works from the modal", async () => {
@@ -122,7 +132,7 @@ describe("ExportWorksPage", () => {
     expect(screen.queryByRole("button", { name: /缩放/ })).not.toBeInTheDocument();
   });
 
-  it("paginates large works and keeps PDF as a placeholder", async () => {
+  it("paginates large works and downloads the generated PDF", async () => {
     const user = userEvent.setup();
     const ids = Array.from({ length: 8 }, (_, index) => `large-${index}`);
     ids.forEach((id, index) => seed(id, `大作品 ${index + 1}`, "completed", 80, 80));
@@ -134,6 +144,25 @@ describe("ExportWorksPage", () => {
     expect(screen.getByText(/第 2 \/ 2 页/)).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "下载 PDF" }));
-    expect(screen.getByText("PDF 下载将在后续 Change 提供。")).toBeVisible();
+    expect(await screen.findByText("PDF 已生成并开始下载。")).toBeVisible();
+    expect(downloadPdfMock).toHaveBeenCalledOnce();
+  });
+
+  it("does not generate an empty PDF and reports export failures", async () => {
+    const user = userEvent.setup();
+    setExportWorkIds([]);
+    const { unmount } = render(<ExportWorksPage {...props()} />);
+
+    await user.click(screen.getByRole("button", { name: "下载 PDF" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("请先添加至少一件作品");
+    expect(downloadPdfMock).not.toHaveBeenCalled();
+
+    seed("work-1", "作品一", "completed");
+    setExportWorkIds(["work-1"]);
+    unmount();
+    render(<ExportWorksPage {...props()} />);
+    downloadPdfMock.mockRejectedValueOnce(new Error("failed"));
+    await user.click(screen.getByRole("button", { name: "下载 PDF" }));
+    expect(await screen.findByText("PDF 生成失败，请重试。")).toBeVisible();
   });
 });

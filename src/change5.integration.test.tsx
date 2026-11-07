@@ -1,12 +1,20 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 import { createDefaultWorkImageState } from "./domain/types";
 import { FIXED_TEST_CODE } from "./features/auth/authService";
 import { setExportWorkIds } from "./features/export/exportSession";
 import { createWork } from "./features/works/workService";
+
+const { downloadPdfMock } = vi.hoisted(() => ({
+  downloadPdfMock: vi.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70])),
+}));
+
+vi.mock("./features/export/pdfExport", () => ({
+  downloadA4Pdf: downloadPdfMock,
+}));
 
 async function loginWithUi() {
   const user = userEvent.setup();
@@ -42,9 +50,11 @@ describe("Change 5 integration", () => {
     window.localStorage.clear();
     window.location.hash = "#/login";
     setExportWorkIds([]);
+    downloadPdfMock.mockClear();
+    downloadPdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70]));
   });
 
-  it("adds P3 selected works to P4, auto-paginates and keeps PDF as placeholder", async () => {
+  it("adds P3 selected works to P4, auto-paginates and downloads through the PDF action", async () => {
     render(<App />);
     const user = await loginWithUi();
     await screen.findByRole("heading", { name: "创作编辑" });
@@ -75,7 +85,8 @@ describe("Change 5 integration", () => {
     await user.click(screen.getByRole("button", { name: "旋转 90°" }));
     expect(screen.queryByLabelText(/缩放/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "下载 PDF" }));
-    expect(screen.getByText("PDF 下载将在后续 Change 提供。")).toBeVisible();
+    expect(await screen.findByText("PDF 已生成并开始下载。")).toBeVisible();
+    expect(downloadPdfMock).toHaveBeenCalledOnce();
   });
 
   it("allows a completed P2 work to enter P4 directly", async () => {

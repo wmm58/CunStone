@@ -11,6 +11,7 @@ import {
   type PlacedWork,
 } from "../features/export/a4Layout";
 import { peekExportWorkIds } from "../features/export/exportSession";
+import { downloadA4Pdf } from "../features/export/pdfExport";
 import WorkPreviewCanvas from "../features/works/WorkPreviewCanvas";
 import { listActiveUserWorksByStatus } from "../features/works/workService";
 
@@ -49,6 +50,8 @@ export default function ExportWorksPage({
   const [addOpen, setAddOpen] = useState(false);
   const [addSelected, setAddSelected] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
   const dragRef = useRef<DragState | null>(null);
 
   const pageCount = getPageCount(layout);
@@ -142,6 +145,24 @@ export default function ExportWorksPage({
   function handleDragEnd(event: PointerEvent<HTMLElement>) {
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     dragRef.current = null;
+  }
+
+  async function handleDownloadPdf() {
+    if (works.length === 0) {
+      setExportError("请先添加至少一件作品。");
+      return;
+    }
+    setExporting(true);
+    setExportError("");
+    setNotice("");
+    try {
+      await downloadA4Pdf({ works, layout, pageCount });
+      setNotice("PDF 已生成并开始下载。");
+    } catch {
+      setExportError("PDF 生成失败，请重试。");
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -288,6 +309,14 @@ export default function ExportWorksPage({
                 {notice}
               </p>
             ) : null}
+            {exportError ? (
+              <p
+                className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700"
+                role="alert"
+              >
+                {exportError}
+              </p>
+            ) : null}
 
             <div className="mt-4 overflow-auto bg-slate-200 p-5">
               <div
@@ -374,11 +403,12 @@ export default function ExportWorksPage({
                 拖动作品调整位置；PDF 仅包含黑白稿，不包含红印效果。
               </span>
               <button
-                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-                onClick={() => setNotice("PDF 下载将在后续 Change 提供。")}
+                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                disabled={exporting}
+                onClick={handleDownloadPdf}
                 type="button"
               >
-                下载 PDF
+                {exporting ? "正在生成 PDF…" : "下载 PDF"}
               </button>
             </div>
           </section>
