@@ -6,6 +6,7 @@ describe("parseRoute", () => {
   it("maps the supported application routes", () => {
     expect(parseRoute("#/login")).toEqual({ name: "login" });
     expect(parseRoute("#/works")).toEqual({ name: "works" });
+    expect(parseRoute("#/export/a4")).toEqual({ name: "exportA4" });
     expect(parseRoute("#/editor/new")).toEqual({ name: "editor" });
     expect(parseRoute("#/editor/work-1")).toEqual({
       name: "editor",
@@ -13,7 +14,7 @@ describe("parseRoute", () => {
     });
   });
 
-  it("does not expose the P4 route before Change 5", () => {
-    expect(parseRoute("#/export/a4")).toEqual({ name: "login" });
+  it("falls back to login for unsupported routes", () => {
+    expect(parseRoute("#/unknown")).toEqual({ name: "login" });
   });
 });

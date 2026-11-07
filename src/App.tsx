@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getActiveUser, signOut } from "./features/auth/authService";
 import { navigate, useHashRoute } from "./app/router";
 import EditorPage from "./pages/EditorPage";
+import ExportWorksPage from "./pages/ExportWorksPage";
 import LoginPage from "./pages/LoginPage";
 import WorksPage from "./pages/WorksPage";
 import { readAppState, writeAppState } from "./lib/storage/appStorage";
@@ -46,6 +47,7 @@ export default function App() {
         }}
         onStartNew={() => navigate("/editor/new")}
         onOpenWorks={() => navigate("/works")}
+        onOpenExport={() => navigate("/export/a4")}
         onWorkSaved={(workId) => navigate(`/editor/${workId}`)}
         workId={route.workId}
       />
@@ -57,6 +59,19 @@ export default function App() {
       <WorksPage
         onEditWork={(workId) => navigate(`/editor/${workId}`)}
         onNewWork={() => navigate("/editor/new")}
+        onOpenExport={() => navigate("/export/a4")}
+        onSignOut={() => {
+          signOut();
+          navigate("/login");
+        }}
+      />
+    );
+  }
+
+  if (route.name === "exportA4" && activeUser) {
+    return (
+      <ExportWorksPage
+        onBack={() => navigate("/works")}
         onSignOut={() => {
           signOut();
           navigate("/login");

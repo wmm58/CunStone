@@ -436,7 +436,7 @@ describe("EditorPage", () => {
     expect(getActiveUserWork("work-image")?.binaryState.carvingMode).toBe("yin");
   });
 
-  it("shows an A4 placeholder without navigating to P4", async () => {
+  it("prevents unsaved or draft work from entering A4 export", async () => {
     const user = userEvent.setup();
     login();
     const hashBefore = window.location.hash;
@@ -450,7 +450,9 @@ describe("EditorPage", () => {
 
     await user.click(screen.getByRole("button", { name: "A4 导出" }));
 
-    expect(screen.getByText("A4 导出将在后续 Change 提供。")).toBeVisible();
+    expect(
+      screen.getByText("请先保存为已完成作品，再进行 A4 导出。"),
+    ).toBeVisible();
     expect(window.location.hash).toBe(hashBefore);
     expect(screen.queryByText(/PDF 下载/)).not.toBeInTheDocument();
   });

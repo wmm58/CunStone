@@ -34,6 +34,17 @@ describe("App", () => {
     expect(window.location.hash).toBe("#/login");
   });
 
+  it("requires a local account before entering the A4 export route", async () => {
+    window.location.hash = "#/export/a4";
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "登录 / 注册" }),
+    ).toBeInTheDocument();
+    expect(window.location.hash).toBe("#/login");
+  });
+
   it("enters the P2 editor shell after successful local login", async () => {
     const user = userEvent.setup();
     render(<App />);

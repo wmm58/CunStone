@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import type { WorkRecord } from "../domain/types";
 import { getActiveUser } from "../features/auth/authService";
+import { setExportWorkIds } from "../features/export/exportSession";
 import WorkPreviewCanvas from "../features/works/WorkPreviewCanvas";
 import {
   deleteActiveUserWorks,
@@ -12,6 +13,7 @@ import {
 interface WorksPageProps {
   onNewWork: () => void;
   onEditWork: (workId: string) => void;
+  onOpenExport: () => void;
   onSignOut: () => void;
 }
 
@@ -24,6 +26,7 @@ const FILTERS: Array<{ value: WorkFilter; label: string }> = [
 export default function WorksPage({
   onNewWork,
   onEditWork,
+  onOpenExport,
   onSignOut,
 }: WorksPageProps) {
   const [filter, setFilter] = useState<WorkFilter>("all");
@@ -160,10 +163,12 @@ export default function WorksPage({
                   删除
                 </button>
                 <button
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-                  onClick={() =>
-                    setNotice("A4 排版将在后续 Change 提供。")
-                  }
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={selected.size === 0}
+                  onClick={() => {
+                    setExportWorkIds([...selected]);
+                    onOpenExport();
+                  }}
                   type="button"
                 >
                   A4 导出

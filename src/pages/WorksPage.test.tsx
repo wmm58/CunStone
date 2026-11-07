@@ -55,6 +55,7 @@ function pageProps() {
   return {
     onEditWork: vi.fn(),
     onNewWork: vi.fn(),
+    onOpenExport: vi.fn(),
     onSignOut: vi.fn(),
   };
 }
@@ -140,10 +141,11 @@ describe("WorksPage", () => {
     expect(screen.queryByText("完成作品甲")).not.toBeInTheDocument();
   });
 
-  it("clears selection when leaving completed filter and exposes A4 placeholder", async () => {
+  it("clears selection when leaving completed filter and opens A4 export with selected works", async () => {
     const user = userEvent.setup();
     seedWorks();
-    render(<WorksPage {...pageProps()} />);
+    const props = pageProps();
+    render(<WorksPage {...props} />);
     await user.click(screen.getByRole("button", { name: "已完成" }));
     await user.click(screen.getByLabelText("选择作品 完成作品甲"));
     expect(screen.getByText("已选 1 项")).toBeVisible();
@@ -152,7 +154,8 @@ describe("WorksPage", () => {
     await user.click(screen.getByRole("button", { name: "已完成" }));
     expect(screen.getByText("已选 0 项")).toBeVisible();
 
+    await user.click(screen.getByLabelText("选择作品 完成作品甲"));
     await user.click(screen.getByRole("button", { name: "A4 导出" }));
-    expect(screen.getByText("A4 排版将在后续 Change 提供。")).toBeVisible();
+    expect(props.onOpenExport).toHaveBeenCalledOnce();
   });
 });

@@ -10,6 +10,7 @@ import {
 } from "../domain/types";
 import EditorWorkspace from "../features/editor/EditorWorkspace";
 import { clearManualEdits } from "../features/editor/binaryEditing";
+import { setExportWorkIds } from "../features/export/exportSession";
 import {
   createWork,
   getActiveUserWork,
@@ -21,6 +22,7 @@ interface EditorPageProps {
   onSignOut: () => void;
   onStartNew: () => void;
   onOpenWorks?: () => void;
+  onOpenExport?: () => void;
   onWorkSaved: (workId: string) => void;
   autosaveDelayMs?: number;
 }
@@ -33,6 +35,7 @@ export default function EditorPage({
   onSignOut,
   onStartNew,
   onOpenWorks,
+  onOpenExport,
   onWorkSaved,
   autosaveDelayMs = 600,
 }: EditorPageProps) {
@@ -360,9 +363,14 @@ export default function EditorPage({
               </button>
               <button
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium"
-                onClick={() =>
-                  setA4Notice("A4 导出将在后续 Change 提供。")
-                }
+                onClick={() => {
+                  if (work && status === "completed" && onOpenExport) {
+                    setExportWorkIds([work.id]);
+                    onOpenExport();
+                  } else {
+                    setA4Notice("请先保存为已完成作品，再进行 A4 导出。");
+                  }
+                }}
                 type="button"
               >
                 A4 导出
