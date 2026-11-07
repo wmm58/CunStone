@@ -20,6 +20,7 @@ interface EditorPageProps {
   workId?: string;
   onSignOut: () => void;
   onStartNew: () => void;
+  onOpenWorks?: () => void;
   onWorkSaved: (workId: string) => void;
   autosaveDelayMs?: number;
 }
@@ -31,6 +32,7 @@ export default function EditorPage({
   workId,
   onSignOut,
   onStartNew,
+  onOpenWorks,
   onWorkSaved,
   autosaveDelayMs = 600,
 }: EditorPageProps) {
@@ -308,13 +310,24 @@ export default function EditorPage({
             </p>
             <h1 className="text-2xl font-bold text-slate-950">创作编辑</h1>
           </div>
-          <button
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-            onClick={onSignOut}
-            type="button"
-          >
-            切换账号
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {onOpenWorks ? (
+              <button
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                onClick={onOpenWorks}
+                type="button"
+              >
+                作品列表
+              </button>
+            ) : null}
+            <button
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              onClick={onSignOut}
+              type="button"
+            >
+              切换账号
+            </button>
+          </div>
         </header>
 
         <section className="rounded-2xl border border-slate-300 bg-white p-6 shadow-sm">

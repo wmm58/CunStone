@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createDefaultWorkBinaryState,
@@ -7,8 +7,10 @@ import {
 import { FIXED_TEST_CODE, loginWithFixedCode, signOut } from "../auth/authService";
 import {
   createWork,
+  deleteActiveUserWorks,
   getActiveUserWork,
   listActiveUserWorks,
+  listActiveUserWorksByStatus,
   updateWork,
 } from "./workService";
 
@@ -198,5 +200,92 @@ describe("workService", () => {
     );
 
     expect(listActiveUserWorks().map((work) => work.name)).toEqual(["账号二作品"]);
+  });
+
+  it("filters active account works by status", () => {
+    login("13800138000", "user-1");
+    createWork(
+      { name: "草稿一", status: "draft" },
+      {
+        createId: () => "work-1",
+        now: () => "2026-11-02T10:01:00.000Z",
+      },
+    );
+    createWork(
+      { name: "已完成一", status: "completed" },
+      {
+        createId: () => "work-2",
+        now: () => "2026-11-02T10:02:00.000Z",
+      },
+    );
+    listActiveUserWorks();
+    expect(listActiveUserWorksByStatus("all").map((work) => work.name)).toEqual([
+      "已完成一",
+      "草稿一",
+    ]);
+    expect(listActiveUserWorksByStatus("draft").map((work) => work.name)).toEqual([
+      "草稿一",
+    ]);
+    expect(
+      listActiveUserWorksByStatus("completed").map((work) => work.name),
+    ).toEqual(["已完成一"]);
+  });
+
+  it("deletes selected active-account works in one write", () => {
+    login("13800138000", "user-1");
+    createWork(
+      { name: "作品一", status: "completed" },
+      { createId: () => "work-1" },
+    );
+    createWork(
+      { name: "作品二", status: "draft" },
+      { createId: () => "work-2" },
+    );
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+
+    expect(
+      deleteActiveUserWorks(["work-1", "work-1", "missing"]),
+    ).toEqual({ ok: true, deletedCount: 1 });
+    expect(listActiveUserWorks().map((work) => work.name)).toEqual(["作品二"]);
+    expect(setItem).toHaveBeenCalledTimes(1);
+    setItem.mockRestore();
+  });
+
+  it("does not delete works owned by another account", () => {
+    login("13800138000", "user-1");
+    createWork(
+      { name: "账号一作品", status: "completed" },
+      { createId: () => "work-1" },
+    );
+    signOut();
+    login("13900139000", "user-2");
+
+    expect(deleteActiveUserWorks(["work-1"])).toEqual({
+      ok: true,
+      deletedCount: 0,
+    });
+    signOut();
+    login("13800138000", "user-1");
+    expect(listActiveUserWorks().map((work) => work.name)).toEqual(["账号一作品"]);
+  });
+
+  it("returns a storage error when batch deletion cannot persist", () => {
+    login("13800138000", "user-1");
+    createWork(
+      { name: "不可删除", status: "draft" },
+      { createId: () => "work-1" },
+    );
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      });
+
+    expect(deleteActiveUserWorks(["work-1"])).toEqual({
+      ok: false,
+      error: "storage",
+    });
+    setItem.mockRestore();
+    expect(listActiveUserWorks().map((work) => work.name)).toEqual(["不可删除"]);
   });
 });

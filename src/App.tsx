@@ -4,6 +4,7 @@ import { getActiveUser, signOut } from "./features/auth/authService";
 import { navigate, useHashRoute } from "./app/router";
 import EditorPage from "./pages/EditorPage";
 import LoginPage from "./pages/LoginPage";
+import WorksPage from "./pages/WorksPage";
 import { readAppState, writeAppState } from "./lib/storage/appStorage";
 
 export default function App() {
@@ -30,7 +31,7 @@ export default function App() {
   }, [initialRead]);
 
   useEffect(() => {
-    if (route.name === "editor" && !activeUser) {
+    if (route.name !== "login" && !activeUser) {
       navigate("/login");
     }
   }, [activeUser, route.name]);
@@ -44,8 +45,22 @@ export default function App() {
           navigate("/login");
         }}
         onStartNew={() => navigate("/editor/new")}
+        onOpenWorks={() => navigate("/works")}
         onWorkSaved={(workId) => navigate(`/editor/${workId}`)}
         workId={route.workId}
+      />
+    );
+  }
+
+  if (route.name === "works" && activeUser) {
+    return (
+      <WorksPage
+        onEditWork={(workId) => navigate(`/editor/${workId}`)}
+        onNewWork={() => navigate("/editor/new")}
+        onSignOut={() => {
+          signOut();
+          navigate("/login");
+        }}
       />
     );
   }

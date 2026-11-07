@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 import { parseRoute } from "./router";
 
 describe("parseRoute", () => {
-  it("maps the supported Change 1 routes", () => {
+  it("maps the supported application routes", () => {
     expect(parseRoute("#/login")).toEqual({ name: "login" });
+    expect(parseRoute("#/works")).toEqual({ name: "works" });
     expect(parseRoute("#/editor/new")).toEqual({ name: "editor" });
     expect(parseRoute("#/editor/work-1")).toEqual({
       name: "editor",
@@ -12,8 +13,7 @@ describe("parseRoute", () => {
     });
   });
 
-  it("does not expose P3 or P4 routes in Change 1", () => {
-    expect(parseRoute("#/works")).toEqual({ name: "login" });
+  it("does not expose the P4 route before Change 5", () => {
     expect(parseRoute("#/export/a4")).toEqual({ name: "login" });
   });
 });

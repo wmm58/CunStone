@@ -366,12 +366,12 @@ describe("Change 2 integration", () => {
     expect(await screen.findByLabelText("编辑画布")).toBeVisible();
   });
 
-  it("does not expose P3, P4 or PDF capabilities", async () => {
+  it("does not expose P4, PDF or carving-check capabilities", async () => {
     render(<App />);
     await loginWithUi();
     await screen.findByRole("heading", { name: "创作编辑" });
 
-    for (const name of ["作品列表", "预览", "A4 排版", "下载 PDF", "自动可刻性检查"]) {
+    for (const name of ["预览", "A4 排版", "下载 PDF", "自动可刻性检查"]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
     expect(screen.queryByText("红印效果")).not.toBeInTheDocument();

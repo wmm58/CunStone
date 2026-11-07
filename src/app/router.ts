@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 export type AppRoute =
   | { name: "login" }
+  | { name: "works" }
   | { name: "editor"; workId?: string };
 
 export function parseRoute(hash: string): AppRoute {
@@ -9,6 +10,10 @@ export function parseRoute(hash: string): AppRoute {
 
   if (path === "/editor/new" || path === "/editor") {
     return { name: "editor" };
+  }
+
+  if (path === "/works") {
+    return { name: "works" };
   }
 
   const editMatch = /^\/editor\/([^/]+)$/.exec(path);

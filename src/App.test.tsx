@@ -23,6 +23,17 @@ describe("App", () => {
     expect(window.location.hash).toBe("#/login");
   });
 
+  it("requires a local account before entering the works route", async () => {
+    window.location.hash = "#/works";
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "登录 / 注册" }),
+    ).toBeInTheDocument();
+    expect(window.location.hash).toBe("#/login");
+  });
+
   it("enters the P2 editor shell after successful local login", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -34,6 +45,24 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: "创作编辑" }),
     ).toBeInTheDocument();
+    expect(window.location.hash).toBe("#/editor/new");
+  });
+
+  it("navigates from P2 to P3 and back to a new work", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.type(screen.getByLabelText("手机号"), "13800138000");
+    await user.type(screen.getByLabelText("验证码"), FIXED_TEST_CODE);
+    await user.click(screen.getByRole("button", { name: "登录 / 注册" }));
+    await screen.findByRole("heading", { name: "创作编辑" });
+
+    await user.click(screen.getByRole("button", { name: "作品列表" }));
+    expect(await screen.findByRole("heading", { name: "作品列表" })).toBeVisible();
+    expect(window.location.hash).toBe("#/works");
+
+    await user.click(screen.getByRole("button", { name: "新建作品" }));
+    expect(await screen.findByRole("heading", { name: "创作编辑" })).toBeVisible();
     expect(window.location.hash).toBe("#/editor/new");
   });
 
