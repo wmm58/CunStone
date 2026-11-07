@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { createDefaultWorkImageState } from "../../domain/types";
+import {
+  createDefaultWorkBinaryState,
+  createDefaultWorkImageState,
+} from "../../domain/types";
 import { FIXED_TEST_CODE, loginWithFixedCode, signOut } from "../auth/authService";
 import {
   createWork,
@@ -45,6 +48,7 @@ describe("workService", () => {
         createdAt: "2026-11-02T10:01:00.000Z",
         lastSavedAt: "2026-11-02T10:01:00.000Z",
         imageState: createDefaultWorkImageState(),
+        binaryState: createDefaultWorkBinaryState(),
       },
     });
   });
@@ -91,6 +95,7 @@ describe("workService", () => {
         createdAt: "2026-11-02T10:01:00.000Z",
         lastSavedAt: "2026-11-02T10:05:00.000Z",
         imageState: createDefaultWorkImageState(),
+        binaryState: createDefaultWorkBinaryState(),
       },
     });
   });
@@ -126,6 +131,40 @@ describe("workService", () => {
         lastSavedAt: "2026-11-02T10:06:00.000Z",
       },
     });
+  });
+
+  it("persists binary editing state on an existing work", () => {
+    login("13800138000", "user-1");
+    createWork(
+      { name: "黑白作品", status: "draft" },
+      { createId: () => "work-1" },
+    );
+    const binaryState = {
+      ...createDefaultWorkBinaryState(),
+      overlayData: "AA==",
+      overlayWidth: 2,
+      overlayHeight: 2,
+      generationSignature: "signature",
+      brushSize: 12,
+      carvingMode: "yin" as const,
+      orientation: "mirror" as const,
+      borderStyle: "double" as const,
+    };
+
+    const result = updateWork(
+      "work-1",
+      { name: "黑白作品", status: "draft", binaryState },
+      { now: () => "2026-11-02T10:07:00.000Z" },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      work: {
+        binaryState,
+        lastSavedAt: "2026-11-02T10:07:00.000Z",
+      },
+    });
+    expect(getActiveUserWork("work-1")?.binaryState).toEqual(binaryState);
   });
 
   it("hides works from another active local account", () => {

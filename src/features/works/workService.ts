@@ -1,5 +1,7 @@
 import {
+  createDefaultWorkBinaryState,
   createDefaultWorkImageState,
+  type WorkBinaryEditState,
   type WorkImageState,
   type WorkRecord,
   type WorkStatus,
@@ -19,6 +21,7 @@ export interface WorkInput {
   name: string;
   status: WorkStatus;
   imageState?: WorkImageState;
+  binaryState?: WorkBinaryEditState;
 }
 
 export type WorkResult =
@@ -47,6 +50,7 @@ export function createWork(input: WorkInput, options: WorkOptions = {}): WorkRes
     createdAt: timestamp,
     lastSavedAt: timestamp,
     imageState: input.imageState ?? createDefaultWorkImageState(),
+    binaryState: input.binaryState ?? createDefaultWorkBinaryState(),
   };
   const state = readAppState(storage).state;
   state.works = [...state.works, work];
@@ -86,6 +90,7 @@ export function updateWork(
     name,
     status: input.status,
     imageState: input.imageState ?? state.works[index].imageState,
+    binaryState: input.binaryState ?? state.works[index].binaryState,
     lastSavedAt: (options.now ?? now)(),
   };
   state.works = state.works.map((candidate, candidateIndex) =>

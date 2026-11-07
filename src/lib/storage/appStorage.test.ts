@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { createDefaultWorkImageState } from "../../domain/types";
+import {
+  createDefaultWorkBinaryState,
+  createDefaultWorkImageState,
+} from "../../domain/types";
+import { encodeOverlay } from "../binary/overlayCodec";
 import {
   APP_STORAGE_KEY,
   clearAppState,
@@ -10,7 +14,7 @@ import {
 } from "./appStorage";
 
 const sampleState = {
-  version: 2 as const,
+  version: 3 as const,
   activeUserId: "user-1",
   users: [
     {
@@ -28,11 +32,33 @@ const sampleState = {
       createdAt: "2026-11-02T10:01:00.000Z",
       lastSavedAt: "2026-11-02T10:02:00.000Z",
       imageState: createDefaultWorkImageState(),
+      binaryState: createDefaultWorkBinaryState(),
     },
   ],
 };
 
-const legacyState = {
+const v2State = {
+  version: 2,
+  activeUserId: "user-1",
+  users: sampleState.users,
+  works: [
+    {
+      id: "work-1",
+      ownerId: "user-1",
+      name: "测试作品",
+      status: "draft",
+      createdAt: "2026-11-02T10:01:00.000Z",
+      lastSavedAt: "2026-11-02T10:02:00.000Z",
+      imageState: {
+        ...createDefaultWorkImageState(),
+        sourceKind: "upload",
+        sourceDataUrl: "data:image/png;base64,AAAA",
+      },
+    },
+  ],
+};
+
+const v1State = {
   version: 1,
   activeUserId: "user-1",
   users: sampleState.users,
@@ -103,12 +129,12 @@ describe("appStorage", () => {
   });
 
   it("migrates v1 data without losing users, works, or the active account", () => {
-    window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(legacyState));
+    window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(v1State));
 
     const result = readAppState();
 
     expect(result.recovery).toBe("migrated");
-    expect(result.state.version).toBe(2);
+    expect(result.state.version).toBe(3);
     expect(result.state.activeUserId).toBe("user-1");
     expect(result.state.users).toEqual(sampleState.users);
     expect(result.state.works[0]).toMatchObject({
@@ -116,7 +142,93 @@ describe("appStorage", () => {
       name: "测试作品",
       status: "draft",
       imageState: createDefaultWorkImageState(),
+      binaryState: createDefaultWorkBinaryState(),
     });
+  });
+
+  it("migrates v2 data while preserving the complete image state", () => {
+    window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(v2State));
+
+    const result = readAppState();
+
+    expect(result.recovery).toBe("migrated");
+    expect(result.state).toMatchObject({
+      version: 3,
+      activeUserId: "user-1",
+      works: [
+        {
+          id: "work-1",
+          imageState: {
+            sourceKind: "upload",
+            sourceDataUrl: "data:image/png;base64,AAAA",
+          },
+          binaryState: createDefaultWorkBinaryState(),
+        },
+      ],
+    });
+  });
+
+  it("rejects invalid v3 binary state", () => {
+    window.localStorage.setItem(
+      APP_STORAGE_KEY,
+      JSON.stringify({
+        ...sampleState,
+        works: [
+          {
+            ...sampleState.works[0],
+            binaryState: {
+              ...createDefaultWorkBinaryState(),
+              brushSize: 33,
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(readAppState()).toEqual({
+      state: createEmptyAppState(),
+      recovery: "corrupt",
+    });
+  });
+
+  it("rejects invalid overlay encoding, dimensions and null pairing", () => {
+    const invalidStates = [
+      {
+        ...createDefaultWorkBinaryState(),
+        overlayData: "not-base64!",
+        overlayWidth: 2,
+        overlayHeight: 2,
+        generationSignature: "signature",
+      },
+      {
+        ...createDefaultWorkBinaryState(),
+        overlayData: encodeOverlay(new Uint8Array(8), 4, 2),
+        overlayWidth: 3,
+        overlayHeight: 3,
+        generationSignature: "signature",
+      },
+      {
+        ...createDefaultWorkBinaryState(),
+        overlayData: null,
+        overlayWidth: 2,
+        overlayHeight: 2,
+        generationSignature: "signature",
+      },
+    ];
+
+    for (const binaryState of invalidStates) {
+      window.localStorage.setItem(
+        APP_STORAGE_KEY,
+        JSON.stringify({
+          ...sampleState,
+          works: [{ ...sampleState.works[0], binaryState }],
+        }),
+      );
+      expect(readAppState()).toEqual({
+        state: createEmptyAppState(),
+        recovery: "corrupt",
+      });
+    }
   });
 
   it("clears stored application data", () => {

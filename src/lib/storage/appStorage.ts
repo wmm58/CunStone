@@ -1,12 +1,15 @@
 import {
+  createDefaultWorkBinaryState,
   createDefaultWorkImageState,
   type LocalUser,
+  type WorkBinaryEditState,
   type WorkImageState,
   type WorkRecord,
 } from "../../domain/types";
+import { isValidPackedOverlay } from "../binary/overlayCodec";
 
 export const APP_STORAGE_KEY = "cunstone:v0.1:app-state";
-export const APP_STORAGE_VERSION = 2 as const;
+export const APP_STORAGE_VERSION = 3 as const;
 
 export interface AppState {
   version: typeof APP_STORAGE_VERSION;
@@ -54,6 +57,13 @@ export function readAppState(storage: Storage = window.localStorage): ReadAppSta
       return { state: createEmptyAppState(), recovery: "corrupt" };
     }
     return { state: migrateV1State(parsed), recovery: "migrated" };
+  }
+
+  if (isRecord(parsed) && parsed.version === 2) {
+    if (!isV2AppState(parsed)) {
+      return { state: createEmptyAppState(), recovery: "corrupt" };
+    }
+    return { state: migrateV2State(parsed), recovery: "migrated" };
   }
 
   if (
@@ -109,7 +119,8 @@ function isWorkRecord(value: unknown): value is WorkRecord {
     (value.status === "draft" || value.status === "completed") &&
     typeof value.createdAt === "string" &&
     typeof value.lastSavedAt === "string" &&
-    isWorkImageState(value.imageState)
+    isWorkImageState(value.imageState) &&
+    isWorkBinaryEditState(value.binaryState)
   );
 }
 
@@ -136,6 +147,50 @@ function isWorkImageState(value: unknown): value is WorkImageState {
   );
 }
 
+function isWorkBinaryEditState(value: unknown): value is WorkBinaryEditState {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const hasOverlay = value.overlayData !== null;
+  const width = value.overlayWidth;
+  const height = value.overlayHeight;
+  const dimensionsValid =
+    Number.isInteger(width) &&
+    Number.isInteger(height) &&
+    (width as number) > 0 &&
+    (height as number) > 0 &&
+    (width as number) <= 512 &&
+    (height as number) <= 512;
+
+  const overlayValid = hasOverlay
+    ? typeof value.overlayData === "string" &&
+      dimensionsValid &&
+      typeof value.generationSignature === "string" &&
+      value.generationSignature.length > 0 &&
+      isValidPackedOverlay(value.overlayData, width as number, height as number)
+    : value.overlayData === null &&
+      value.overlayWidth === null &&
+      value.overlayHeight === null &&
+      value.generationSignature === null;
+
+  return (
+    overlayValid &&
+    typeof value.brushSize === "number" &&
+    Number.isInteger(value.brushSize) &&
+    value.brushSize >= 1 &&
+    value.brushSize <= 32 &&
+    (value.carvingMode === "yang" || value.carvingMode === "yin") &&
+    (value.orientation === "normal" || value.orientation === "mirror") &&
+    (value.borderStyle === "none" ||
+      value.borderStyle === "single" ||
+      value.borderStyle === "thick" ||
+      value.borderStyle === "double" ||
+      value.borderStyle === "broken") &&
+    value.editVersion === 1
+  );
+}
+
 interface V1WorkRecord {
   id: string;
   ownerId: string;
@@ -150,6 +205,15 @@ interface V1AppState {
   activeUserId: string | null;
   users: LocalUser[];
   works: V1WorkRecord[];
+}
+
+interface V2WorkRecord extends Omit<WorkRecord, "binaryState"> {}
+
+interface V2AppState {
+  version: 2;
+  activeUserId: string | null;
+  users: LocalUser[];
+  works: V2WorkRecord[];
 }
 
 function isV1AppState(value: unknown): value is V1AppState {
@@ -176,6 +240,31 @@ function isV1WorkRecord(value: unknown): value is V1WorkRecord {
   );
 }
 
+function isV2AppState(value: unknown): value is V2AppState {
+  return (
+    isRecord(value) &&
+    value.version === 2 &&
+    (value.activeUserId === null || typeof value.activeUserId === "string") &&
+    Array.isArray(value.users) &&
+    value.users.every(isLocalUser) &&
+    Array.isArray(value.works) &&
+    value.works.every(isV2WorkRecord)
+  );
+}
+
+function isV2WorkRecord(value: unknown): value is V2WorkRecord {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.ownerId === "string" &&
+    typeof value.name === "string" &&
+    (value.status === "draft" || value.status === "completed") &&
+    typeof value.createdAt === "string" &&
+    typeof value.lastSavedAt === "string" &&
+    isWorkImageState(value.imageState)
+  );
+}
+
 function migrateV1State(state: V1AppState): AppState {
   return {
     version: APP_STORAGE_VERSION,
@@ -184,6 +273,19 @@ function migrateV1State(state: V1AppState): AppState {
     works: state.works.map((work) => ({
       ...work,
       imageState: createDefaultWorkImageState(),
+      binaryState: createDefaultWorkBinaryState(),
+    })),
+  };
+}
+
+function migrateV2State(state: V2AppState): AppState {
+  return {
+    version: APP_STORAGE_VERSION,
+    activeUserId: state.activeUserId,
+    users: state.users,
+    works: state.works.map((work) => ({
+      ...work,
+      binaryState: createDefaultWorkBinaryState(),
     })),
   };
 }

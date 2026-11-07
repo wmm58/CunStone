@@ -2,6 +2,9 @@ export type WorkStatus = "draft" | "completed";
 export type SealShape = "square" | "rectangle" | "circle" | "custom";
 export type EffectMode = "silhouette" | "outline";
 export type ImageSourceKind = "upload" | "drawing";
+export type CarvingMode = "yang" | "yin";
+export type SealOrientation = "normal" | "mirror";
+export type BorderStyle = "none" | "single" | "thick" | "double" | "broken";
 
 export interface WorkImageState {
   sourceKind: ImageSourceKind | null;
@@ -29,6 +32,32 @@ export function createDefaultWorkImageState(): WorkImageState {
   };
 }
 
+export interface WorkBinaryEditState {
+  overlayData: string | null;
+  overlayWidth: number | null;
+  overlayHeight: number | null;
+  generationSignature: string | null;
+  brushSize: number;
+  carvingMode: CarvingMode;
+  orientation: SealOrientation;
+  borderStyle: BorderStyle;
+  editVersion: 1;
+}
+
+export function createDefaultWorkBinaryState(): WorkBinaryEditState {
+  return {
+    overlayData: null,
+    overlayWidth: null,
+    overlayHeight: null,
+    generationSignature: null,
+    brushSize: 6,
+    carvingMode: "yang",
+    orientation: "normal",
+    borderStyle: "none",
+    editVersion: 1,
+  };
+}
+
 export interface LocalUser {
   id: string;
   phone: string;
@@ -43,4 +72,5 @@ export interface WorkRecord {
   createdAt: string;
   lastSavedAt: string;
   imageState: WorkImageState;
+  binaryState: WorkBinaryEditState;
 }

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
+import { createDefaultWorkImageState } from "./domain/types";
 import { FIXED_TEST_CODE } from "./features/auth/authService";
 import * as imageInput from "./features/editor/imageInput";
 import { APP_STORAGE_KEY, readAppState } from "./lib/storage/appStorage";
@@ -124,7 +125,10 @@ describe("Change 2 integration", () => {
     expect(screen.getByLabelText("背景容差")).toHaveValue("55");
     expect(screen.getByText("#ffffff")).toBeVisible();
     expect(await screen.findByLabelText("编辑画布")).toBeVisible();
-    expect(screen.getByRole("button", { name: "黑白稿" })).toBeEnabled();
+    const binaryButton = screen.getByRole("button", { name: "黑白稿编辑" });
+    await waitFor(() => expect(binaryButton).toBeEnabled());
+    await user.click(binaryButton);
+    expect(await screen.findByLabelText("黑白稿编辑画布")).toBeVisible();
   });
 
   it("draws a complete input, saves it, and persists drawing as source kind", async () => {
@@ -181,7 +185,10 @@ describe("Change 2 integration", () => {
     expect(screen.getByLabelText("宽 (mm)")).toHaveValue("20");
     expect(screen.getByLabelText("高 (mm)")).toHaveValue("30");
     expect(await screen.findByLabelText("编辑画布")).toBeVisible();
-    expect(screen.getByRole("button", { name: "黑白稿" })).toBeEnabled();
+    const binaryButton = screen.getByRole("button", { name: "黑白稿编辑" });
+    await waitFor(() => expect(binaryButton).toBeEnabled());
+    await user.click(binaryButton);
+    expect(await screen.findByLabelText("黑白稿编辑画布")).toBeVisible();
   });
 
   it("opens a migrated v1 work with an empty image state and stores no derived image", async () => {
@@ -217,7 +224,7 @@ describe("Change 2 integration", () => {
     expect(screen.getByText("请上传图片或完成手绘")).toBeVisible();
     await waitFor(() =>
       expect(JSON.parse(window.localStorage.getItem(APP_STORAGE_KEY) ?? "{}")).toMatchObject({
-        version: 2,
+        version: 3,
         works: [
           {
             id: "work-1",
@@ -231,13 +238,86 @@ describe("Change 2 integration", () => {
               tolerance: 20,
               effectMode: "silhouette",
             },
+            binaryState: {
+              overlayData: null,
+              overlayWidth: null,
+              overlayHeight: null,
+              generationSignature: null,
+              brushSize: 6,
+              carvingMode: "yang",
+              orientation: "normal",
+              borderStyle: "none",
+              editVersion: 1,
+            },
           },
         ],
       }),
     );
     expect(window.localStorage.getItem(APP_STORAGE_KEY)).not.toMatch(
-      /binary|blackWhite|derived/i,
+      /finalBinary|blackWhitePng|historySnapshot/i,
     );
+  });
+
+  it("migrates a v2 work and adds the default binary editing state", async () => {
+    window.localStorage.setItem(
+      APP_STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        activeUserId: "user-1",
+        users: [
+          {
+            id: "user-1",
+            phone: "13800138000",
+            createdAt: "2026-11-02T10:00:00.000Z",
+          },
+        ],
+        works: [
+          {
+            id: "work-2",
+            ownerId: "user-1",
+            name: "第二版作品",
+            status: "completed",
+            createdAt: "2026-11-02T10:01:00.000Z",
+            lastSavedAt: "2026-11-02T10:02:00.000Z",
+            imageState: {
+              ...createDefaultWorkImageState(),
+              sourceKind: "upload",
+              sourceDataUrl: prepared.dataUrl,
+              backgroundColor: "#ffffff",
+              tolerance: 35,
+              effectMode: "outline",
+            },
+          },
+        ],
+      }),
+    );
+    window.location.hash = "#/editor/work-2";
+
+    render(<App />);
+
+    expect(await screen.findByDisplayValue("第二版作品")).toBeVisible();
+    expect(screen.getByRole("button", { name: "轮廓线稿" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByLabelText("背景容差")).toHaveValue("35");
+    expect(screen.getByRole("button", { name: "阳刻" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByLabelText("画笔线宽")).toHaveValue("6");
+
+    await waitFor(() => {
+      const saved = readAppState().state.works[0];
+      expect(saved.binaryState).toMatchObject({
+        overlayData: null,
+        brushSize: 6,
+        carvingMode: "yang",
+        orientation: "normal",
+        borderStyle: "none",
+        editVersion: 1,
+      });
+    });
   });
 
   it("autosaves image settings and restores the work after signing out and back in", async () => {
@@ -286,13 +366,14 @@ describe("Change 2 integration", () => {
     expect(await screen.findByLabelText("编辑画布")).toBeVisible();
   });
 
-  it("does not expose Change 3 or later controls", async () => {
+  it("does not expose P3, P4 or PDF capabilities", async () => {
     render(<App />);
     await loginWithUi();
     await screen.findByRole("heading", { name: "创作编辑" });
 
-    for (const name of ["橡皮", "撤销", "重做", "线宽", "阴刻", "阳刻", "边框", "A4 导出", "作品列表"]) {
+    for (const name of ["作品列表", "预览", "A4 排版", "下载 PDF", "自动可刻性检查"]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
+    expect(screen.queryByText("红印效果")).not.toBeInTheDocument();
   });
 });

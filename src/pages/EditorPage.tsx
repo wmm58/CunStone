@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 
 import {
+  createDefaultWorkBinaryState,
   createDefaultWorkImageState,
+  type WorkBinaryEditState,
   type WorkImageState,
   type WorkRecord,
   type WorkStatus,
 } from "../domain/types";
-import ImagePreparationPanel from "../features/editor/ImagePreparationPanel";
+import EditorWorkspace from "../features/editor/EditorWorkspace";
+import { clearManualEdits } from "../features/editor/binaryEditing";
 import {
   createWork,
   getActiveUserWork,
@@ -23,6 +26,7 @@ interface EditorPageProps {
 
 type SaveState = "new" | "unsaved" | "saving" | "saved" | "error";
 
+// 本文件只保留作品生命周期与保存协调；编辑控件和画布已拆分到 EditorWorkspace。
 export default function EditorPage({
   workId,
   onSignOut,
@@ -36,12 +40,17 @@ export default function EditorPage({
   const [imageState, setImageState] = useState<WorkImageState>(
     createDefaultWorkImageState,
   );
+  const [binaryState, setBinaryState] = useState<WorkBinaryEditState>(
+    createDefaultWorkBinaryState,
+  );
   const [dirty, setDirty] = useState(false);
   const [imageDirty, setImageDirty] = useState(false);
+  const [binaryDirty, setBinaryDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("new");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState("");
+  const [a4Notice, setA4Notice] = useState("");
 
   useEffect(() => {
     setError("");
@@ -53,7 +62,9 @@ export default function EditorPage({
       setName("未命名作品");
       setStatus("draft");
       setImageState(createDefaultWorkImageState());
+      setBinaryState(createDefaultWorkBinaryState());
       setImageDirty(false);
+      setBinaryDirty(false);
       setLastSavedAt(null);
       setSaveState("new");
       return;
@@ -70,13 +81,15 @@ export default function EditorPage({
     setName(loaded.name);
     setStatus(loaded.status);
     setImageState(loaded.imageState);
+    setBinaryState(loaded.binaryState);
     setLastSavedAt(loaded.lastSavedAt);
     setSaveState("saved");
     setImageDirty(false);
+    setBinaryDirty(false);
   }, [workId]);
 
   useEffect(() => {
-    if (!work || (!dirty && !imageDirty)) {
+    if (!work || (!dirty && !imageDirty && !binaryDirty)) {
       return;
     }
 
@@ -89,7 +102,12 @@ export default function EditorPage({
     const timer = window.setTimeout(() => {
       setSaveState("saving");
       try {
-        const result = updateWork(work.id, { name, status, imageState });
+        const result = updateWork(work.id, {
+          name,
+          status,
+          imageState,
+          binaryState,
+        });
         if (!result.ok) {
           setSaveState("error");
           return;
@@ -98,9 +116,11 @@ export default function EditorPage({
         setName(result.work.name);
         setStatus(result.work.status);
         setImageState(result.work.imageState);
+        setBinaryState(result.work.binaryState);
         setLastSavedAt(result.work.lastSavedAt);
         setDirty(false);
         setImageDirty(false);
+        setBinaryDirty(false);
         setError("");
         setSaveState("saved");
       } catch {
@@ -109,7 +129,17 @@ export default function EditorPage({
     }, autosaveDelayMs);
 
     return () => window.clearTimeout(timer);
-  }, [autosaveDelayMs, dirty, imageDirty, imageState, name, status, work]);
+  }, [
+    autosaveDelayMs,
+    binaryDirty,
+    binaryState,
+    dirty,
+    imageDirty,
+    imageState,
+    name,
+    status,
+    work,
+  ]);
 
   function handleNameChange(nextName: string) {
     setName(nextName);
@@ -117,8 +147,14 @@ export default function EditorPage({
     setError("");
   }
 
-  function handleImageStateChange(next: WorkImageState) {
+  function handleImageStateChange(
+    next: WorkImageState,
+    resetManualEdits = false,
+  ) {
     const trimmedName = name.trim();
+    const nextBinaryState = resetManualEdits
+      ? clearManualEdits(binaryState)
+      : binaryState;
     const shouldPersistImmediately =
       work &&
       trimmedName &&
@@ -131,12 +167,16 @@ export default function EditorPage({
           name: trimmedName,
           status,
           imageState: next,
+          binaryState: nextBinaryState,
         });
         if (result.ok) {
           setWork(result.work);
           setImageState(result.work.imageState);
+          setBinaryState(result.work.binaryState);
           setLastSavedAt(result.work.lastSavedAt);
+          setDirty(false);
           setImageDirty(false);
+          setBinaryDirty(false);
           setSaveState("saved");
           setError("");
           return;
@@ -156,10 +196,21 @@ export default function EditorPage({
     }
 
     setImageState(next);
+    setBinaryState(nextBinaryState);
     setImageDirty(true);
+    if (resetManualEdits) {
+      setBinaryDirty(true);
+    }
     if (!shouldPersistImmediately) {
       setSaveState("unsaved");
     }
+  }
+
+  function handleBinaryStateChange(next: WorkBinaryEditState) {
+    setBinaryState(next);
+    setBinaryDirty(true);
+    setSaveState("unsaved");
+    setError("");
   }
 
   function save(nextStatus: WorkStatus) {
@@ -178,11 +229,13 @@ export default function EditorPage({
             name: trimmedName,
             status: nextStatus,
             imageState,
+            binaryState,
           })
         : createWork({
             name: trimmedName,
             status: nextStatus,
             imageState,
+            binaryState,
           });
 
       if (!result.ok) {
@@ -200,9 +253,11 @@ export default function EditorPage({
       setName(result.work.name);
       setStatus(result.work.status);
       setImageState(result.work.imageState);
+      setBinaryState(result.work.binaryState);
       setLastSavedAt(result.work.lastSavedAt);
       setDirty(false);
       setImageDirty(false);
+      setBinaryDirty(false);
       setSaveState("saved");
 
       if (isNew) {
@@ -290,6 +345,15 @@ export default function EditorPage({
               >
                 保存（已完成）
               </button>
+              <button
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium"
+                onClick={() =>
+                  setA4Notice("A4 导出将在后续 Change 提供。")
+                }
+                type="button"
+              >
+                A4 导出
+              </button>
             </div>
           </div>
 
@@ -316,10 +380,21 @@ export default function EditorPage({
             </p>
           ) : null}
 
+          {a4Notice ? (
+            <p
+              className="mt-4 rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-800"
+              role="status"
+            >
+              {a4Notice}
+            </p>
+          ) : null}
+
           <div className="mt-6">
-            <ImagePreparationPanel
+            <EditorWorkspace
+              binaryState={binaryState}
               imageState={imageState}
-              onChange={handleImageStateChange}
+              onBinaryStateChange={handleBinaryStateChange}
+              onImageStateChange={handleImageStateChange}
             />
           </div>
         </section>

@@ -2,7 +2,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createDefaultWorkImageState } from "../domain/types";
+import {
+  createDefaultWorkBinaryState,
+  createDefaultWorkImageState,
+  type WorkBinaryEditState,
+} from "../domain/types";
 import {
   FIXED_TEST_CODE,
   loginWithFixedCode,
@@ -54,6 +58,23 @@ function seedWork(name = "已有草稿", status: "draft" | "completed" = "draft"
   return createWork(
     { name, status },
     { createId: () => "work-1", now: () => "2026-11-02T10:00:00.000Z" },
+  );
+}
+
+function seedImageWork(binaryState: WorkBinaryEditState = createDefaultWorkBinaryState()) {
+  return createWork(
+    {
+      name: "已有图片作品",
+      status: "draft",
+      imageState: {
+        ...createDefaultWorkImageState(),
+        sourceKind: "upload",
+        sourceDataUrl: preparedImage.dataUrl,
+        backgroundColor: "#ffffff",
+      },
+      binaryState,
+    },
+    { createId: () => "work-image", now: () => "2026-11-02T10:00:00.000Z" },
   );
 }
 
@@ -188,6 +209,36 @@ describe("EditorPage", () => {
     });
   });
 
+  it("autosaves black-white editing settings in an existing work", async () => {
+    const user = userEvent.setup();
+    login();
+    seedImageWork();
+    canvasMock = installCanvasMock();
+    render(
+      <EditorPage
+        autosaveDelayMs={10}
+        onSignOut={vi.fn()}
+        onStartNew={vi.fn()}
+        onWorkSaved={vi.fn()}
+        workId="work-image"
+      />,
+    );
+
+    await screen.findByDisplayValue("已有图片作品");
+    const editButton = screen.getByRole("button", { name: "黑白稿编辑" });
+    await waitFor(() => expect(editButton).toBeEnabled());
+    await user.click(editButton);
+    await user.click(screen.getByRole("button", { name: "阴刻" }));
+
+    await waitFor(() =>
+      expect(getActiveUserWork("work-image")?.binaryState.carvingMode).toBe("yin"),
+    );
+    expect(screen.getByRole("button", { name: "阴刻" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
   it("debounces rapid image setting changes into one storage write", async () => {
     login();
     seedWork();
@@ -212,6 +263,42 @@ describe("EditorPage", () => {
       expect(getActiveUserWork("work-1")?.imageState).toMatchObject({
         shape: "circle",
         effectMode: "silhouette",
+      }),
+    );
+    expect(setItem).toHaveBeenCalledTimes(1);
+  });
+
+  it("debounces rapid binary setting changes into one storage write", async () => {
+    login();
+    seedImageWork();
+    canvasMock = installCanvasMock();
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    render(
+      <EditorPage
+        autosaveDelayMs={80}
+        onSignOut={vi.fn()}
+        onStartNew={vi.fn()}
+        onWorkSaved={vi.fn()}
+        workId="work-image"
+      />,
+    );
+
+    await screen.findByDisplayValue("已有图片作品");
+    const editButton = screen.getByRole("button", { name: "黑白稿编辑" });
+    await waitFor(() => expect(editButton).toBeEnabled());
+    fireEvent.click(editButton);
+    fireEvent.click(screen.getByRole("button", { name: "阴刻" }));
+    fireEvent.click(screen.getByRole("button", { name: "阳刻" }));
+    fireEvent.click(screen.getByRole("button", { name: "左右镜像" }));
+    fireEvent.click(screen.getByRole("button", { name: "正常方向" }));
+    fireEvent.click(screen.getByRole("button", { name: "双线" }));
+    fireEvent.click(screen.getByRole("button", { name: "残破边" }));
+
+    await waitFor(() =>
+      expect(getActiveUserWork("work-image")?.binaryState).toMatchObject({
+        carvingMode: "yang",
+        orientation: "normal",
+        borderStyle: "broken",
       }),
     );
     expect(setItem).toHaveBeenCalledTimes(1);
@@ -309,6 +396,63 @@ describe("EditorPage", () => {
       ),
     );
     expect(screen.queryByText("保存失败，请重试")).not.toBeInTheDocument();
+  });
+
+  it("keeps binary settings when autosave fails and retries on explicit save", async () => {
+    const user = userEvent.setup();
+    login();
+    seedImageWork();
+    canvasMock = installCanvasMock();
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      });
+
+    render(
+      <EditorPage
+        autosaveDelayMs={10}
+        onSignOut={vi.fn()}
+        onStartNew={vi.fn()}
+        onWorkSaved={vi.fn()}
+        workId="work-image"
+      />,
+    );
+
+    await screen.findByDisplayValue("已有图片作品");
+    const editButton = screen.getByRole("button", { name: "黑白稿编辑" });
+    await waitFor(() => expect(editButton).toBeEnabled());
+    await user.click(editButton);
+    await user.click(screen.getByRole("button", { name: "阴刻" }));
+
+    expect(await screen.findByText("保存失败，请重试")).toBeVisible();
+    expect(screen.getByRole("button", { name: "阴刻" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    setItem.mockRestore();
+    await user.click(screen.getByRole("button", { name: "草稿" }));
+    expect(getActiveUserWork("work-image")?.binaryState.carvingMode).toBe("yin");
+  });
+
+  it("shows an A4 placeholder without navigating to P4", async () => {
+    const user = userEvent.setup();
+    login();
+    const hashBefore = window.location.hash;
+    render(
+      <EditorPage
+        onSignOut={vi.fn()}
+        onStartNew={vi.fn()}
+        onWorkSaved={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "A4 导出" }));
+
+    expect(screen.getByText("A4 导出将在后续 Change 提供。")).toBeVisible();
+    expect(window.location.hash).toBe(hashBefore);
+    expect(screen.queryByText(/PDF 下载/)).not.toBeInTheDocument();
   });
 
   it("does not expose a work from another local account", async () => {
