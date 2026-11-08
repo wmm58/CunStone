@@ -67,11 +67,7 @@ export function applyBorder(
   );
   const unit = Math.max(1, Math.round(minDimension * 0.00625));
   const baseThickness = Math.max(1, unit * requestedThickness);
-  const legacyBrokenThickness = Math.max(1, Math.round(minDimension * 0.0125));
-  const lineThickness =
-    style === "broken"
-      ? legacyBrokenThickness
-      : baseThickness;
+  const lineThickness = baseThickness;
   const gap = Math.max(1, Math.round(lineThickness * 0.75));
 
   if (shape === "circle") {
@@ -85,14 +81,12 @@ export function applyBorder(
       insetX,
       insetY,
       lineThickness,
-      false,
     );
     drawRectangleBand(
       result,
       insetX + lineThickness + gap,
       insetY + lineThickness + gap,
       lineThickness,
-      false,
     );
     return result;
   }
@@ -102,7 +96,6 @@ export function applyBorder(
     insetX,
     insetY,
     lineThickness,
-    style === "broken",
   );
   return result;
 }
@@ -137,7 +130,6 @@ function drawRectangleBand(
   insetX: number,
   insetY: number,
   thickness: number,
-  broken: boolean,
 ): void {
   const startX = insetX;
   const endX = image.width - insetX - 1;
@@ -146,8 +138,6 @@ function drawRectangleBand(
   if (startX > endX || startY > endY) {
     return;
   }
-
-  const blockSize = Math.max(3, Math.round(Math.min(image.width, image.height) * 0.12));
 
   for (let y = startY; y <= endY; y += 1) {
     for (let x = startX; x <= endX; x += 1) {
@@ -159,15 +149,6 @@ function drawRectangleBand(
         (y <= endY && y > endY - thickness);
       if (!vertical && !horizontal) {
         continue;
-      }
-
-      if (broken) {
-        const side = horizontal ? (y < image.height / 2 ? 0 : 1) : x < image.width / 2 ? 2 : 3;
-        const coordinate = side < 2 ? x : y;
-        const block = Math.floor(coordinate / blockSize) + side * 97;
-        if (stableHash(block, image.width, image.height) % 6 === 0) {
-          continue;
-        }
       }
 
       setBlack(image, x, y);
@@ -214,14 +195,6 @@ function drawCircleBands(
         continue;
       }
 
-      if (style === "broken") {
-        const angle = Math.atan2(ny, nx) + Math.PI;
-        const segment = Math.floor((angle / (Math.PI * 2)) * 48);
-        if (stableHash(segment, image.width, image.height) % 5 === 0) {
-          continue;
-        }
-      }
-
       setBlack(image, x, y);
     }
   }
@@ -229,14 +202,6 @@ function drawCircleBands(
 
 function setBlack(image: RgbaImage, x: number, y: number): void {
   image.data.set([0, 0, 0, 255], (y * image.width + x) * 4);
-}
-
-function stableHash(value: number, width: number, height: number): number {
-  let hash = Math.imul(value + 1, 0x45d9f3b);
-  hash ^= Math.imul(width, 0x27d4eb2d);
-  hash ^= Math.imul(height, 0x165667b1);
-  hash ^= hash >>> 16;
-  return hash >>> 0;
 }
 
 function ensurePureBlackWhite(image: RgbaImage): RgbaImage {

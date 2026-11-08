@@ -18,17 +18,18 @@ import { clearManualEdits } from "../features/editor/binaryEditing";
 import { setExportWorkIds } from "../features/export/exportSession";
 import {
   createWork,
-  getActiveUserWork,
+  getWork,
   updateWork,
 } from "../features/works/workService";
 
 interface EditorPageProps {
   workId?: string;
-  onSignOut: () => void;
+  onDismissStorageNotice?: () => void;
   onStartNew: () => void;
   onOpenWorks?: () => void;
   onOpenExport?: () => void;
   onWorkSaved: (workId: string) => void;
+  storageNotice?: string;
   autosaveDelayMs?: number;
 }
 
@@ -36,11 +37,12 @@ type SaveNotice = "draft" | "completed";
 
 export default function EditorPage({
   workId,
-  onSignOut,
+  onDismissStorageNotice,
   onStartNew,
   onOpenWorks,
   onOpenExport,
   onWorkSaved,
+  storageNotice,
   autosaveDelayMs = 600,
 }: EditorPageProps) {
   const [work, setWork] = useState<WorkRecord | null>(null);
@@ -96,7 +98,7 @@ export default function EditorPage({
       return;
     }
 
-    const loaded = getActiveUserWork(workId);
+    const loaded = getWork(workId);
     if (!loaded) {
       setWork(null);
       setNotFound(true);
@@ -135,7 +137,7 @@ export default function EditorPage({
         if (!result.ok) {
           setError(
             result.error === "not-found"
-              ? "作品不存在或不属于当前本地账号"
+              ? "作品不存在"
               : "保存失败，请重试",
           );
           return;
@@ -237,7 +239,7 @@ export default function EditorPage({
       if (!result.ok) {
         setError(
           result.error === "not-found"
-            ? "作品不存在或不属于当前本地账号"
+            ? "作品不存在"
             : "保存失败，请重试",
         );
         return null;
@@ -376,16 +378,9 @@ export default function EditorPage({
           <BrandHeader pageTitle="创作编辑" />
           <section className="mx-auto mt-12 max-w-xl rounded-2xl border border-slate-300 bg-white p-8 text-center">
             <p className="mb-5 text-sm text-slate-600">
-              作品不存在或不属于当前本地账号
+              作品不存在
             </p>
             <div className="flex justify-center gap-2">
-              <button
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
-                onClick={onSignOut}
-                type="button"
-              >
-                切换账号
-              </button>
               <button
                 className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
                 onClick={onStartNew}
@@ -416,18 +411,27 @@ export default function EditorPage({
                     作品列表
                   </button>
                 ) : null}
-                <button
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                  onClick={() => requestLeave(onSignOut)}
-                  type="button"
-                >
-                  切换账号
-                </button>
               </>
             }
             pageTitle="创作编辑"
           />
         </div>
+
+        {storageNotice ? (
+          <div
+            className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            role="status"
+          >
+            <span>{storageNotice}</span>
+            <button
+              className="rounded-md border border-amber-400 px-3 py-1 text-xs"
+              onClick={onDismissStorageNotice}
+              type="button"
+            >
+              知道了
+            </button>
+          </div>
+        ) : null}
 
         <section className="mt-4 rounded-2xl border border-slate-300 bg-white p-4 shadow-sm xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:overflow-hidden">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
@@ -513,11 +517,8 @@ export default function EditorPage({
         >
           <p>
             {saveNotice === "draft"
-              ? "作品已保存到当前浏览器。更换浏览器、清除站点数据或更换设备后可能无法恢复。"
+              ? "作品已保存到当前浏览器。清除站点数据或更换设备后可能无法恢复。"
               : "作品已保存到当前浏览器，可继续编辑，也可在作品列表中预览或进入 A4 排版。"}
-          </p>
-          <p className="mt-2 text-xs text-slate-500">
-            本地账号仅用于区分作品，不等同于安全隔离。
           </p>
         </EditorDialog>
       ) : null}

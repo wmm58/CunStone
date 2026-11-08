@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import { FIXED_TEST_CODE } from "./features/auth/authService";
 import { renderFinalBinary } from "./features/editor/binaryRendering";
 import * as imageInput from "./features/editor/imageInput";
 import { renderBinaryDraft } from "./features/editor/imageProcessing";
@@ -56,12 +55,9 @@ function mockCanvasRect(canvas: HTMLElement) {
   });
 }
 
-async function loginWithUi() {
-  const user = userEvent.setup();
-  await user.type(screen.getByLabelText("手机号"), "13800138000");
-  await user.type(screen.getByLabelText("验证码"), FIXED_TEST_CODE);
-  await user.click(screen.getByRole("button", { name: "登录 / 注册" }));
-  return user;
+async function startApp() {
+  window.location.hash = "#/editor/new";
+  return userEvent.setup();
 }
 
 async function prepareUploadedWork(user: ReturnType<typeof userEvent.setup>) {
@@ -109,7 +105,7 @@ describe("Change 3 integration", () => {
 
   beforeEach(() => {
     window.localStorage.clear();
-    window.location.hash = "#/login";
+    window.location.hash = "#/editor/new";
     canvasMock = installCanvasMock();
     vi.mocked(imageInput.prepareSourceFile).mockReset();
     vi.mocked(imageInput.prepareSourceDataUrl).mockReset();
@@ -125,7 +121,7 @@ describe("Change 3 integration", () => {
 
   it("edits, saves and restores final pixels and border thickness", async () => {
     const firstRender = render(<App />);
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
     await prepareUploadedWork(user);
     const workId = readAppState().state.works[0].id;
@@ -244,7 +240,7 @@ describe("Change 3 integration", () => {
 
   it("protects and resets manual edits after confirmation", async () => {
     render(<App />);
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
     await prepareUploadedWork(user);
 

@@ -14,14 +14,13 @@ import {
 import { peekExportWorkIds } from "../features/export/exportSession";
 import { downloadA4Pdf } from "../features/export/pdfExport";
 import WorkPreviewCanvas from "../features/works/WorkPreviewCanvas";
-import { listActiveUserWorksByStatus } from "../features/works/workService";
+import { listWorksByStatus } from "../features/works/workService";
 
 const SCREEN_PX_PER_MM = 3;
 const DEFAULT_SPACING = { horizontalGapMm: 5, verticalGapMm: 5 };
 
 interface ExportWorksPageProps {
   onBack: () => void;
-  onSignOut: () => void;
 }
 
 interface DragState {
@@ -34,11 +33,10 @@ interface DragState {
 
 export default function ExportWorksPage({
   onBack,
-  onSignOut,
 }: ExportWorksPageProps) {
   const [works, setWorks] = useState<WorkRecord[]>(() => {
     const ids = new Set(peekExportWorkIds());
-    return listActiveUserWorksByStatus("completed").filter((work) =>
+    return listWorksByStatus("completed").filter((work) =>
       ids.has(work.id),
     );
   });
@@ -57,7 +55,7 @@ export default function ExportWorksPage({
 
   const pageCount = getPageCount(layout);
   const displayedItems = layout.filter((item) => item.pageIndex === pageIndex);
-  const availableWorks = listActiveUserWorksByStatus("completed").filter(
+  const availableWorks = listWorksByStatus("completed").filter(
     (work) => !works.some((existing) => existing.id === work.id),
   );
 
@@ -179,13 +177,6 @@ export default function ExportWorksPage({
                   type="button"
                 >
                   返回作品列表
-                </button>
-                <button
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                  onClick={onSignOut}
-                  type="button"
-                >
-                  切换账号
                 </button>
               </>
             }

@@ -134,24 +134,6 @@ describe("BinaryEditorPanel", () => {
     );
   });
 
-  it("shows a read-only marker for a legacy broken border", () => {
-    render(
-      <BinaryEditorPanel
-        {...props({
-          binaryState: {
-            ...createDefaultWorkBinaryState(),
-            borderStyle: "broken",
-          },
-        })}
-      />,
-    );
-
-    expect(screen.getByText("历史残破边（只读兼容）")).toBeVisible();
-    expect(screen.getByLabelText("边框粗细")).toBeDisabled();
-    expect(screen.getByLabelText("边框外边距")).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "残破边" })).not.toBeInTheDocument();
-  });
-
   it("wires undo, redo and zoom actions", async () => {
     const user = userEvent.setup();
     const callbacks = props();

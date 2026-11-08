@@ -3,12 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import { FIXED_TEST_CODE } from "./features/auth/authService";
 import * as imageInput from "./features/editor/imageInput";
 import { setExportWorkIds } from "./features/export/exportSession";
-import { APP_STORAGE_KEY, readAppState } from "./lib/storage/appStorage";
+import { readAppState } from "./lib/storage/appStorage";
 import { installCanvasMock } from "./test/canvasMock";
-import { createV3MigrationFixtures } from "./test/migrationFixtures";
 
 const { downloadPdfMock } = vi.hoisted(() => ({
   downloadPdfMock: vi.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70])),
@@ -73,12 +71,9 @@ function mockCanvasRect(canvas: HTMLElement) {
   });
 }
 
-async function loginWithUi() {
-  const user = userEvent.setup();
-  await user.type(screen.getByLabelText("手机号"), "13800138000");
-  await user.type(screen.getByLabelText("验证码"), FIXED_TEST_CODE);
-  await user.click(screen.getByRole("button", { name: "登录 / 注册" }));
-  return user;
+async function startApp() {
+  window.location.hash = "#/editor/new";
+  return userEvent.setup();
 }
 
 async function uploadPrepared() {
@@ -95,7 +90,7 @@ describe("Change 7 integration", () => {
 
   beforeEach(() => {
     window.localStorage.clear();
-    window.location.hash = "#/login";
+    window.location.hash = "#/editor/new";
     setExportWorkIds([]);
     downloadPdfMock.mockClear();
     downloadPdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70]));
@@ -114,7 +109,7 @@ describe("Change 7 integration", () => {
 
   it("runs a two-background sample through save, P3 preview, A4 and PDF", async () => {
     render(<App />);
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
 
     const inputCanvas = await uploadPrepared();
@@ -172,7 +167,7 @@ describe("Change 7 integration", () => {
 
   it("does not overwrite the last valid work after clear and resumes after re-upload", async () => {
     render(<App />);
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
     await user.clear(screen.getByLabelText("作品名称"));
     await user.type(screen.getByLabelText("作品名称"), "清除恢复作品");
@@ -215,7 +210,7 @@ describe("Change 7 integration", () => {
 
   it("auto-saves a new P2 work as completed and opens it in P4", async () => {
     render(<App />);
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
     await user.clear(screen.getByLabelText("作品名称"));
     await user.type(screen.getByLabelText("作品名称"), "P2 直接导出");
@@ -239,40 +234,4 @@ describe("Change 7 integration", () => {
     expect(downloadPdfMock).toHaveBeenCalledOnce();
   }, 30_000);
 
-  it("upgrades all legacy works and keeps drawing, custom and broken compatibility", async () => {
-    window.localStorage.setItem(
-      APP_STORAGE_KEY,
-      JSON.stringify(createV3MigrationFixtures()),
-    );
-    window.location.hash = "#/works";
-
-    render(<App />);
-    const user = userEvent.setup();
-    await screen.findByRole("heading", { name: "作品列表" });
-    await user.click(screen.getByRole("button", { name: "已完成" }));
-
-    await waitFor(() => expect(readAppState().state.works).toHaveLength(6));
-    const byId = new Map(
-      readAppState().state.works.map((work) => [work.id, work]),
-    );
-    expect(byId.get("legacy-drawing")?.imageState.sourceKind).toBe("drawing");
-    expect(byId.get("legacy-custom")?.imageState.shape).toBe("rectangle");
-    expect(byId.get("legacy-broken")?.binaryState.borderStyle).toBe("broken");
-    expect(
-      byId.get("single-background")?.imageState.backgroundRules,
-    ).toHaveLength(1);
-
-    const card = screen.getByText("legacy-broken").closest("article");
-    expect(card).not.toBeNull();
-    await user.click(within(card as HTMLElement).getByRole("button", { name: "预览" }));
-    const dialog = screen.getByRole("dialog", { name: "作品预览弹窗" });
-    expect(await within(dialog).findByLabelText("legacy-broken 黑白印稿")).toBeVisible();
-    await user.click(within(dialog).getByRole("button", { name: "关闭" }));
-    await user.click(screen.getByLabelText("选择作品 legacy-broken"));
-    await user.click(screen.getByRole("button", { name: "A4 导出" }));
-    await screen.findByRole("heading", { name: "A4 导出" });
-    await user.click(screen.getByRole("button", { name: "下载 PDF" }));
-    expect(await screen.findByText("PDF 已生成并开始下载。")).toBeVisible();
-    expect(downloadPdfMock).toHaveBeenCalledOnce();
-  }, 30_000);
 });

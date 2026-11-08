@@ -1,10 +1,10 @@
 export type WorkStatus = "draft" | "completed";
 export type SealShape = "square" | "rectangle" | "circle";
 export type EffectMode = "silhouette" | "outline";
-export type ImageSourceKind = "upload" | "drawing";
+export type ImageSourceKind = "upload";
 export type CarvingMode = "yang" | "yin";
 export type SealOrientation = "normal" | "mirror";
-export type BorderStyle = "none" | "single" | "double" | "broken";
+export type BorderStyle = "none" | "single" | "double";
 
 export const MAX_BACKGROUND_RULES = 10;
 export const DEFAULT_BACKGROUND_TOLERANCE = 20;
@@ -100,15 +100,8 @@ export function createDefaultWorkBinaryState(): WorkBinaryEditState {
   };
 }
 
-export interface LocalUser {
-  id: string;
-  phone: string;
-  createdAt: string;
-}
-
 export interface WorkRecord {
   id: string;
-  ownerId: string;
   name: string;
   status: WorkStatus;
   createdAt: string;

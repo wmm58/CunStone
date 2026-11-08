@@ -73,15 +73,6 @@ describe("binaryRendering", () => {
     expect(bordered.data[rowOffset + 58 * 4]).toBe(0);
   });
 
-  it("renders deterministic broken borders", () => {
-    const source = image(64, 64);
-    const first = applyBorder(source, "broken", "square");
-    const second = applyBorder(source, "broken", "square");
-
-    expect(first.data).toEqual(second.data);
-    expect(first.data).not.toEqual(applyBorder(source, "single", "square").data);
-  });
-
   it("keeps circular border pixels inside the circle", () => {
     const source = image(80, 80);
     const bordered = applyBorder(source, "single", "circle");

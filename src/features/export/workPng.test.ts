@@ -27,7 +27,6 @@ const source: RgbaImage = {
 function work(borderThickness: number): WorkRecord {
   return {
     id: "work-1",
-    ownerId: "user-1",
     name: "边框作品",
     status: "completed",
     createdAt: "2026-11-08T10:00:00.000Z",

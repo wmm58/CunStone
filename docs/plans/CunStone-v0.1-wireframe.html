@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>CunStone Change 7 第四轮优化低保真线框图</title>
+  <title>CunStone Change 8 纯静态单用户线框图</title>
   <style>
     :root {
       --ink: #111111;
@@ -1576,22 +1576,22 @@
 <body>
   <main class="sheet">
     <header>
-      <div class="eyebrow">CunStone / Change 7 fourth round / Low-fidelity wireframe</div>
+      <div class="eyebrow">CunStone / Change 8 / Low-fidelity wireframe</div>
       <h1>篆刻印稿转印工具 · 页面结构与用户路径</h1>
       <div class="version-target" aria-label="线框图版本与目标状态">
         <strong>目标状态</strong>
-        <span>基于 Change 7 第三轮实现</span>
-        <span>目标 Change 7 第四轮优化（v0-1-7）</span>
-        <span>更新：2026-11-08 · 未归档</span>
+        <span>基于 Change 7 已归档实现</span>
+        <span>目标 Change 8 纯静态单用户发布（v0-1-8）</span>
+        <span>更新：2026-11-08 · 待验收</span>
       </div>
       <p class="lede">
-        本线框图只用于确认 Change 7 的目标页面结构、内容分区和用户路径，不代表最终视觉样式、交互细节或前端实现。
+        本线框图只用于确认 Change 8 的目标页面结构、内容分区和用户路径，不代表最终视觉样式、交互细节或前端实现。
       </p>
       <div class="meta">
-        <span>依据：CunStone v0.1 蓝图及 Change 7 第四轮需求</span>
+        <span>依据：CunStone v0.1 蓝图及 Change 8 需求</span>
         <span>日期：2026-10-26</span>
-        <span>目标版本：v0-1-7</span>
-        <span>4 个核心页面</span>
+        <span>目标版本：v0-1-8</span>
+        <span>3 个核心页面</span>
         <span>电脑浏览器</span>
       </div>
     </header>
@@ -1606,13 +1606,11 @@
     <section class="section" aria-labelledby="flow-title">
       <div class="section-heading">
         <h2 id="flow-title">用户路径总览</h2>
-        <span class="hint">P1–P4 对应下方四个页面线框</span>
+        <span class="hint">P2–P4 对应下方三个页面线框；P1 已删除</span>
       </div>
       <div class="flow-board">
         <div class="flow-line">
-          <div class="flow-step">P1 登录 / 注册<small>手机号 + 验证码</small></div>
-          <span class="flow-arrow">→</span>
-          <div class="flow-step">P2 创作编辑<small>登录后直接进入</small></div>
+          <div class="flow-step">P2 创作编辑<small>打开网址直接进入</small></div>
           <span class="flow-arrow">→</span>
           <div class="flow-step">编辑页操作<small>草稿 / 保存 / A4 导出 / 清除</small></div>
         </div>
@@ -1626,8 +1624,8 @@
           <div class="flow-step">下载黑白 PDF<small>流程结束</small></div>
         </div>
         <div class="flow-rules">
-          <div class="flow-rule"><strong>统一品牌</strong>四页使用内嵌 SVG Logo、CUNSTONE 和页面名称，不显示 P 编号角标。</div>
-          <div class="flow-rule"><strong>登录直达编辑</strong>P1 登录成功后直接进入 P2。</div>
+          <div class="flow-rule"><strong>统一品牌</strong>三个核心页面使用内嵌 SVG Logo、CUNSTONE 和页面名称，不显示 P 编号角标。</div>
+          <div class="flow-rule"><strong>无账号进入</strong>根路径、旧登录路径和未知路径都直接进入 P2 创作编辑页。</div>
           <div class="flow-rule"><strong>P2 直接导出</strong>点击 A4 导出先自动保存为已完成，再进入 P4。</div>
           <div class="flow-rule"><strong>P3 作品管理</strong>已完成页支持“一键全选”、删除，以及红印/黑白预览弹窗。</div>
           <div class="flow-rule"><strong>P4 添加作品</strong>通过弹窗多选已完成作品，确定后显示总添加数量。</div>
@@ -1643,57 +1641,10 @@
       </div>
 
       <div class="screen-grid">
-        <article class="screen" aria-labelledby="p1-title">
-          <div class="browser-bar">
-            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-            <div class="browser-route">cunstone.app / login</div>
-          </div>
-          <div class="screen-title">
-            <strong id="p1-title">登录 / 注册</strong>
-            <span>入口：未登录<br>出口：P2 创作编辑页</span>
-          </div>
-          <div class="screen-body">
-            <div class="brand-shell" aria-label="页面品牌头部">
-              <div class="brand-lockup">
-                <span class="brand-mark" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M16.5 8.2C15.4 7.2 13.9 6.8 12.3 7.1C9.8 7.5 8 9.7 8.3 12.2C8.6 14.7 10.8 16.5 13.3 16.2C14.7 16 15.8 15.3 16.6 14.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-                    <path d="M5 19.5H9M15 4.5H19" stroke="currentColor" stroke-width="1.2"/>
-                  </svg>
-                </span>
-                <strong class="brand-wordmark">CUNSTONE</strong>
-              </div>
-              <span class="brand-divider" aria-hidden="true"></span>
-              <span class="brand-page-name">登录 / 注册</span>
-              <span class="brand-note">内嵌 SVG Logo · 页面名称替代 P 编号</span>
-            </div>
-            <div class="login-layout">
-              <div class="login-context">
-                <div class="brand-placeholder">方形印面 + 负形刻痕<br>精致几何 Logo 占位</div>
-                <h3>产品说明占位</h3>
-                <p class="muted">上传已有画面，制作可打印、可转印的黑白印稿。</p>
-                <p class="note">未登录用户不能访问作品、编辑或导出页面。</p>
-              </div>
-              <div class="login-card">
-                <h3>手机号登录</h3>
-                <div class="field">手机号输入框</div>
-                <div class="field-row">
-                  <div class="field">验证码输入框</div>
-                  <div class="btn">获取验证码</div>
-                </div>
-                <div class="btn primary block" style="margin-top: 14px;">登录 / 注册</div>
-                <p class="note" style="margin: 10px 0 0;">手机号验证码为唯一登录方式。</p>
-              </div>
-            </div>
-            <div class="page-exit">登录成功后直接进入 P2 创作编辑页；作品列表可从编辑页进入。</div>
-          </div>
-        </article>
-
         <article class="screen" aria-labelledby="p3-title">
           <div class="browser-bar">
             <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-            <div class="browser-route">cunstone.app / works</div>
+            <div class="browser-route">gitee.io / cunstone / works</div>
           </div>
           <div class="screen-title">
             <strong id="p3-title">作品列表</strong>
@@ -1782,11 +1733,11 @@
         <article class="screen" aria-labelledby="p2-title">
           <div class="browser-bar">
             <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-            <div class="browser-route">cunstone.app / editor</div>
+            <div class="browser-route">gitee.io / cunstone / editor</div>
           </div>
           <div class="screen-title">
             <strong id="p2-title">创作编辑</strong>
-            <span>入口：P1 登录直达 / P3 继续编辑<br>出口：P3 或 P4</span>
+            <span>入口：打开网址直接进入 / P3 继续编辑<br>出口：P3 或 P4</span>
           </div>
           <div class="screen-body editor-body">
             <div class="brand-shell" aria-label="页面品牌头部">
@@ -1942,14 +1893,15 @@
             </div>
 
             <div class="change7-rule-strip">
-              <div><strong>品牌</strong>P1–P4 统一 Logo、字标与页面名称，删除 P 编号。</div>
+              <div><strong>品牌</strong>P2–P4 三页统一 Logo、字标与页面名称，删除 P 编号。</div>
               <div><strong>画布</strong>右侧铺满、默认 1:1；模式入口移至左侧工具区且始终可双向切换。</div>
               <div><strong>保存</strong>成功后弹窗说明结果；不再常驻草稿、未保存和安全说明。</div>
+              <div><strong>本地数据</strong>当前浏览器单用户 v8；旧 v1–v7 数据清空后以空作品库启动。</div>
               <div><strong>图片工具</strong>裁剪、透视裁剪、连续图片橡皮；保留背景规则，工作图延后保存。</div>
               <div><strong>手绘与边框</strong>画笔/橡皮独立大小；效果与边框外边距均以 mm 显示。</div>
             </div>
 
-            <div class="dialog-examples" aria-label="Change 7 第四轮关键弹窗">
+            <div class="dialog-examples" aria-label="Change 8 关键弹窗">
               <div class="dialog-example">
                 <h4>草稿已保存</h4>
                 <p>作品已保存到当前浏览器。更换浏览器、清除站点数据或更换设备后可能无法恢复。</p>
@@ -1978,7 +1930,7 @@
             </div>
 
             <p class="editor-boundary">
-              版本目标：基于 Change 7 第三轮实现的第四轮优化（v0-1-7，未归档）。红印与黑白稿预览仍只在 P3 预览弹窗展示。
+              版本目标：基于 Change 7 已归档实现的 Change 8 纯静态单用户发布（v0-1-8，待验收）。应用无登录、无后端，使用 localStorage v8 和 Gitee Pages 静态托管；旧数据允许清空。
             </p>
           </div>
         </article>
@@ -1986,7 +1938,7 @@
         <article class="screen" aria-labelledby="p4-title">
           <div class="browser-bar">
             <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-            <div class="browser-route">cunstone.app / export/a4</div>
+            <div class="browser-route">gitee.io / cunstone / export/a4</div>
           </div>
           <div class="screen-title">
             <strong id="p4-title">A4 导出</strong>
@@ -2088,7 +2040,7 @@
     </section>
 
     <p class="footer-note">
-      本文件为 CunStone 基于 Change 7 第三轮实现、目标 Change 7 第四轮优化（v0-1-7，未归档）的总览式低保真线框图，只表达页面结构和用户路径；不包含真实交互、业务逻辑、正式视觉稿或前端代码。
+      本文件为 CunStone 基于 Change 7 已归档实现、目标 Change 8 纯静态单用户发布（v0-1-8，待验收）的总览式低保真线框图，只表达页面结构和用户路径；不包含真实交互、业务逻辑、正式视觉稿或前端代码。
     </p>
   </main>
 </body>

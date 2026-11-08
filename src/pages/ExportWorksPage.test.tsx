@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FIXED_TEST_CODE, loginWithFixedCode } from "../features/auth/authService";
 import { createDefaultWorkImageState } from "../domain/types";
 import { createWork } from "../features/works/workService";
 import { setExportWorkIds } from "../features/export/exportSession";
@@ -21,13 +20,6 @@ vi.mock("../features/works/WorkPreviewCanvas", () => ({
 vi.mock("../features/export/pdfExport", () => ({
   downloadA4Pdf: downloadPdfMock,
 }));
-
-function login() {
-  loginWithFixedCode(
-    { phone: "13800138000", code: FIXED_TEST_CODE },
-    { createId: () => "user-1" },
-  );
-}
 
 function seed(
   id: string,
@@ -54,14 +46,12 @@ function seed(
 function props() {
   return {
     onBack: vi.fn(),
-    onSignOut: vi.fn(),
   };
 }
 
 describe("ExportWorksPage", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    login();
     downloadPdfMock.mockReset();
     downloadPdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70]));
   });

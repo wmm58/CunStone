@@ -22,7 +22,6 @@ const source: RgbaImage = {
 function work(overrides: Partial<WorkRecord> = {}): WorkRecord {
   return {
     id: "work-1",
-    ownerId: "user-1",
     name: "预览作品",
     status: "completed",
     createdAt: "2026-11-07T10:00:00.000Z",
@@ -94,28 +93,6 @@ describe("workPreview", () => {
     );
 
     expect(blackCount(thick)).toBeGreaterThan(blackCount(thin));
-  });
-
-  it("renders a historical broken border in the shared preview", () => {
-    const imageState = {
-      ...createDefaultWorkImageState(),
-      sourceDataUrl: "source",
-      backgroundRules: [
-        { id: "white", color: "#ffffff", tolerance: 0 },
-      ],
-    };
-    const preview = renderWorkBlackWhite(
-      work({
-        imageState,
-        binaryState: {
-          ...createDefaultWorkBinaryState(),
-          borderStyle: "broken",
-        },
-      }),
-      source,
-    );
-
-    expect(blackCount(preview)).toBeGreaterThan(0);
   });
 
   it("maps black pixels to clean red and keeps white pixels white", () => {

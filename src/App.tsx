@@ -1,89 +1,54 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { getActiveUser, signOut } from "./features/auth/authService";
 import { navigate, useHashRoute } from "./app/router";
 import EditorPage from "./pages/EditorPage";
 import ExportWorksPage from "./pages/ExportWorksPage";
-import LoginPage from "./pages/LoginPage";
 import WorksPage from "./pages/WorksPage";
-import { readAppState, writeAppState } from "./lib/storage/appStorage";
+import { readAppState } from "./lib/storage/appStorage";
 
 export default function App() {
   const route = useHashRoute();
-  const activeUser = getActiveUser();
   const [initialRead] = useState(() => readAppState());
-  const storageNotice =
-    initialRead.recovery === "corrupt"
-      ? "本地数据无法读取，已使用空数据启动。"
-      : initialRead.recovery === "unsupported-version"
-        ? "本地数据版本不兼容，已使用空数据启动。"
-        : initialRead.recovery === "migrated"
-          ? "本地数据已升级到新版本。"
-          : undefined;
-
-  useEffect(() => {
-    if (initialRead.recovery === "migrated") {
-      try {
-        writeAppState(initialRead.state);
-      } catch {
-        // 保留内存中的迁移结果，后续保存时继续尝试。
-      }
+  const [storageNotice, setStorageNotice] = useState<string | null>(() => {
+    if (initialRead.recovery === "reset-old-version") {
+      return "旧版本本地数据已清空，已使用空白作品库启动。";
     }
-  }, [initialRead]);
-
-  useEffect(() => {
-    if (route.name !== "login" && !activeUser) {
-      navigate("/login");
+    if (initialRead.recovery === "corrupt") {
+      return "本地数据无法读取，已清空并使用空白作品库启动。";
     }
-  }, [activeUser, route.name]);
+    return null;
+  });
 
-  if (route.name === "editor" && activeUser) {
+  if (route.name === "editor") {
     return (
       <EditorPage
         key={route.workId ?? "new"}
-        onSignOut={() => {
-          signOut();
-          navigate("/login");
-        }}
+        onDismissStorageNotice={() => setStorageNotice(null)}
         onStartNew={() => navigate("/editor/new")}
         onOpenWorks={() => navigate("/works")}
         onOpenExport={() => navigate("/export/a4")}
         onWorkSaved={(workId) => navigate(`/editor/${workId}`)}
+        storageNotice={storageNotice ?? undefined}
         workId={route.workId}
       />
     );
   }
 
-  if (route.name === "works" && activeUser) {
+  if (route.name === "works") {
     return (
       <WorksPage
         onEditWork={(workId) => navigate(`/editor/${workId}`)}
         onNewWork={() => navigate("/editor/new")}
         onOpenExport={() => navigate("/export/a4")}
-        onSignOut={() => {
-          signOut();
-          navigate("/login");
-        }}
       />
     );
   }
 
-  if (route.name === "exportA4" && activeUser) {
+  if (route.name === "exportA4") {
     return (
-      <ExportWorksPage
-        onBack={() => navigate("/works")}
-        onSignOut={() => {
-          signOut();
-          navigate("/login");
-        }}
-      />
+      <ExportWorksPage onBack={() => navigate("/works")} />
     );
   }
 
-  return (
-    <LoginPage
-      onSuccess={() => navigate("/editor/new")}
-      storageNotice={storageNotice}
-    />
-  );
+  return null;
 }

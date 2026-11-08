@@ -17,7 +17,6 @@ const PNG = Uint8Array.from(
 function work(id: string, name: string): WorkRecord {
   return {
     id,
-    ownerId: "user-1",
     name,
     status: "completed",
     createdAt: "2026-11-07T10:00:00.000Z",

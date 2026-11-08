@@ -217,21 +217,12 @@ export default function BinaryEditorPanel({
             </button>
           ))}
         </div>
-        {binaryState.borderStyle === "broken" ? (
-          <p className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
-            历史残破边（只读兼容）
-          </p>
-        ) : null}
         <label className="mt-3 block text-xs text-slate-600">
           边框粗细 {binaryState.borderThickness}
           <input
             aria-label="边框粗细"
             className="mt-1 w-full accent-slate-900"
-            disabled={
-              disabled ||
-              binaryState.borderStyle === "none" ||
-              binaryState.borderStyle === "broken"
-            }
+            disabled={disabled || binaryState.borderStyle === "none"}
             max={8}
             min={1}
             onChange={(event) =>
@@ -249,11 +240,7 @@ export default function BinaryEditorPanel({
           <input
             aria-label="边框外边距"
             className="mt-1 w-full accent-slate-900"
-            disabled={
-              disabled ||
-              binaryState.borderStyle === "none" ||
-              binaryState.borderStyle === "broken"
-            }
+            disabled={disabled || binaryState.borderStyle === "none"}
             max={MAX_BORDER_MARGIN_MM}
             min={MIN_BORDER_MARGIN_MM}
             onChange={(event) =>

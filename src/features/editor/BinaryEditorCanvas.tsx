@@ -26,7 +26,7 @@ export default function BinaryEditorCanvas({
   onStrokeEnd,
 }: BinaryEditorCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const drawingRef = useRef(false);
+  const strokeActiveRef = useRef(false);
   const [cursor, setCursor] = useState<PixelPoint | null>(null);
   const { containerRef, frameStyle } = useFittedCanvasSize(
     raster ? raster.width / raster.height : 1,
@@ -79,7 +79,7 @@ export default function BinaryEditorCanvas({
       return;
     }
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    drawingRef.current = true;
+    strokeActiveRef.current = true;
     onStrokeStart(point);
   }
 
@@ -88,7 +88,7 @@ export default function BinaryEditorCanvas({
     if (point) {
       setCursor(point);
     }
-    if (!drawingRef.current) {
+    if (!strokeActiveRef.current) {
       return;
     }
     if (point) {
@@ -97,10 +97,10 @@ export default function BinaryEditorCanvas({
   }
 
   function finishStroke(event: PointerEvent<HTMLCanvasElement>) {
-    if (!drawingRef.current) {
+    if (!strokeActiveRef.current) {
       return;
     }
-    drawingRef.current = false;
+    strokeActiveRef.current = false;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     onStrokeEnd();
   }

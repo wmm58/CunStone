@@ -7,19 +7,14 @@ import {
   createDefaultWorkImageState,
   type WorkBinaryEditState,
 } from "../domain/types";
-import {
-  FIXED_TEST_CODE,
-  loginWithFixedCode,
-  signOut,
-} from "../features/auth/authService";
 import * as imageInput from "../features/editor/imageInput";
 import { peekExportWorkIds } from "../features/export/exportSession";
 import { createGenerationSignature } from "../features/editor/binaryRendering";
 import { encodeOverlay } from "../lib/binary/overlayCodec";
 import {
   createWork,
-  getActiveUserWork,
-  listActiveUserWorks,
+  getWork,
+  listWorks,
 } from "../features/works/workService";
 import { installCanvasMock } from "../test/canvasMock";
 import EditorPage from "./EditorPage";
@@ -49,13 +44,6 @@ const preparedImage = {
     ]),
   },
 };
-
-function login(phone = "13800138000", userId = "user-1") {
-  loginWithFixedCode(
-    { phone, code: FIXED_TEST_CODE },
-    { createId: () => userId },
-  );
-}
 
 function seedImageWork(binaryState: WorkBinaryEditState = createDefaultWorkBinaryState()) {
   return createWork(
@@ -115,10 +103,8 @@ describe("EditorPage", () => {
 
   it("requires a non-empty work name before save validation", async () => {
     const user = userEvent.setup();
-    login();
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
       />,
@@ -132,10 +118,8 @@ describe("EditorPage", () => {
 
   it("blocks both draft and completed save for an empty work", async () => {
     const user = userEvent.setup();
-    login();
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
       />,
@@ -143,21 +127,19 @@ describe("EditorPage", () => {
 
     await user.click(screen.getByRole("button", { name: "草稿" }));
     expect(screen.getByRole("alert")).toHaveTextContent("作品为空");
-    expect(listActiveUserWorks()).toHaveLength(0);
+    expect(listWorks()).toHaveLength(0);
 
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(screen.getByRole("alert")).toHaveTextContent("作品为空");
-    expect(listActiveUserWorks()).toHaveLength(0);
+    expect(listWorks()).toHaveLength(0);
   });
 
   it("saves a completed work with the simplified save label", async () => {
     const user = userEvent.setup();
-    login();
     const onWorkSaved = vi.fn();
     render(
       <EditorPage
         autosaveDelayMs={10}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={onWorkSaved}
       />,
@@ -177,11 +159,10 @@ describe("EditorPage", () => {
     expect(dialog).toHaveTextContent(
       "作品已保存到当前浏览器，可继续编辑，也可在作品列表中预览或进入 A4 排版。",
     );
-    expect(dialog).toHaveTextContent("本地账号仅用于区分作品，不等同于安全隔离。");
     expect(onWorkSaved).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "知道了" }));
     expect(onWorkSaved).toHaveBeenCalledOnce();
-    expect(listActiveUserWorks()).toMatchObject([
+    expect(listWorks()).toMatchObject([
       {
         name: "第一枚印章",
         status: "completed",
@@ -191,11 +172,9 @@ describe("EditorPage", () => {
 
   it("reopens a saved work and marks it completed", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -209,17 +188,15 @@ describe("EditorPage", () => {
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     expect(screen.getByRole("dialog", { name: "作品已保存" })).toBeVisible();
-    expect(getActiveUserWork("work-image")?.status).toBe("completed");
+    expect(getWork("work-image")?.status).toBe("completed");
   });
 
   it("autosaves a name change only after valid printable content is available", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     render(
       <EditorPage
         autosaveDelayMs={10}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -234,13 +211,12 @@ describe("EditorPage", () => {
     await user.type(input, "自动保存后的名字");
 
     await waitFor(() =>
-      expect(getActiveUserWork("work-image")?.name).toBe("自动保存后的名字"),
+      expect(getWork("work-image")?.name).toBe("自动保存后的名字"),
     );
   });
 
   it("does not autosave a blank work even when its name changes", async () => {
     const user = userEvent.setup();
-    login();
     const work = createWork(
       { name: "旧空作品", status: "draft" },
       { createId: () => "blank-work" },
@@ -249,7 +225,6 @@ describe("EditorPage", () => {
     render(
       <EditorPage
         autosaveDelayMs={10}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="blank-work"
@@ -261,17 +236,15 @@ describe("EditorPage", () => {
     await user.type(input, "不应自动保存");
     await new Promise((resolve) => window.setTimeout(resolve, 30));
 
-    expect(getActiveUserWork("blank-work")?.name).toBe("旧空作品");
+    expect(getWork("blank-work")?.name).toBe("旧空作品");
   });
 
   it("clears all work content without overwriting the last valid saved version", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     render(
       <EditorPage
         autosaveDelayMs={10}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -282,21 +255,20 @@ describe("EditorPage", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "黑白稿编辑" })).toBeEnabled(),
     );
-    const before = getActiveUserWork("work-image");
+    const before = getWork("work-image");
 
     await user.click(screen.getByRole("button", { name: "清除" }));
     expect(screen.queryByText("#FFFFFF")).not.toBeInTheDocument();
     expect(screen.getByLabelText("作品名称")).toHaveValue("已有图片作品");
     await new Promise((resolve) => window.setTimeout(resolve, 30));
 
-    expect(getActiveUserWork("work-image")).toEqual(before);
+    expect(getWork("work-image")).toEqual(before);
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(screen.getByRole("alert")).toHaveTextContent("作品为空");
   });
 
   it("resumes autosave after a valid replacement image is uploaded following clear", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     const replacement = {
       ...preparedImage,
@@ -306,7 +278,6 @@ describe("EditorPage", () => {
     render(
       <EditorPage
         autosaveDelayMs={10}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -327,20 +298,18 @@ describe("EditorPage", () => {
     });
 
     await waitFor(() =>
-      expect(getActiveUserWork("work-image")?.imageState.sourceDataUrl).toBe(
+      expect(getWork("work-image")?.imageState.sourceDataUrl).toBe(
         replacement.dataUrl,
       ),
     );
   });
 
   it("autosaves binary settings and border thickness", async () => {
-    login();
     seedImageWork();
     canvasMock = installCanvasMock();
     render(
       <EditorPage
         autosaveDelayMs={10}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -356,7 +325,7 @@ describe("EditorPage", () => {
     });
 
     await waitFor(() =>
-      expect(getActiveUserWork("work-image")?.binaryState).toMatchObject({
+      expect(getWork("work-image")?.binaryState).toMatchObject({
         carvingMode: "yin",
         borderStyle: "double",
         borderThickness: 8,
@@ -366,13 +335,11 @@ describe("EditorPage", () => {
 
   it("does not autosave image eraser strokes until an explicit save", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     canvasMock = installCanvasMock();
     render(
       <EditorPage
         autosaveDelayMs={10}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -381,7 +348,7 @@ describe("EditorPage", () => {
 
     const canvas = await screen.findByLabelText("编辑画布");
     mockCanvasRect(canvas as HTMLCanvasElement);
-    const before = getActiveUserWork("work-image");
+    const before = getWork("work-image");
     await user.click(screen.getByRole("button", { name: "使用橡皮" }));
     fireEvent.change(screen.getByLabelText("图片橡皮大小"), {
       target: { value: "1" },
@@ -392,21 +359,20 @@ describe("EditorPage", () => {
 
     await new Promise((resolve) => window.setTimeout(resolve, 40));
 
-    expect(getActiveUserWork("work-image")).toEqual(before);
+    expect(getWork("work-image")).toEqual(before);
     expect(screen.getByRole("button", { name: "使用橡皮" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
 
     await user.click(screen.getByRole("button", { name: "保存" }));
-    expect(getActiveUserWork("work-image")?.imageState.sourceDataUrl).toContain(
+    expect(getWork("work-image")?.imageState.sourceDataUrl).toContain(
       "data:image/webp",
     );
   });
 
   it("keeps a valid work and shows an error when autosave cannot write", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     const setItem = vi
       .spyOn(Storage.prototype, "setItem")
@@ -417,7 +383,6 @@ describe("EditorPage", () => {
     render(
       <EditorPage
         autosaveDelayMs={10}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -436,11 +401,9 @@ describe("EditorPage", () => {
 
   it("shows the approved draft-save modal", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -455,20 +418,17 @@ describe("EditorPage", () => {
 
     const dialog = screen.getByRole("dialog", { name: "草稿已保存" });
     expect(dialog).toHaveTextContent(
-      "作品已保存到当前浏览器。更换浏览器、清除站点数据或更换设备后可能无法恢复。",
+      "作品已保存到当前浏览器。清除站点数据或更换设备后可能无法恢复。",
     );
-    expect(dialog).toHaveTextContent("本地账号仅用于区分作品，不等同于安全隔离。");
   });
 
   it("protects unsaved changes before leaving the editor", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     const onOpenWorks = vi.fn();
     render(
       <EditorPage
         onOpenWorks={onOpenWorks}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -490,12 +450,11 @@ describe("EditorPage", () => {
     await user.click(screen.getByRole("button", { name: "保存草稿并继续" }));
 
     expect(onOpenWorks).toHaveBeenCalledOnce();
-    expect(getActiveUserWork("work-image")?.name).toBe("未保存的改名");
+    expect(getWork("work-image")?.name).toBe("未保存的改名");
   });
 
   it("keeps the editor open when saving before leave fails", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     const onOpenWorks = vi.fn();
     const setItem = vi
@@ -506,7 +465,6 @@ describe("EditorPage", () => {
     render(
       <EditorPage
         onOpenWorks={onOpenWorks}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -529,14 +487,12 @@ describe("EditorPage", () => {
 
   it("asks before replacing existing content and can cancel or continue", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     const inputClick = vi
       .spyOn(HTMLInputElement.prototype, "click")
       .mockImplementation(() => {});
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -559,13 +515,11 @@ describe("EditorPage", () => {
 
   it("opens the picker without a replacement prompt for an empty canvas", async () => {
     const user = userEvent.setup();
-    login();
     const inputClick = vi
       .spyOn(HTMLInputElement.prototype, "click")
       .mockImplementation(() => {});
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
       />,
@@ -577,14 +531,13 @@ describe("EditorPage", () => {
     expect(inputClick).toHaveBeenCalledOnce();
   });
 
-  it("protects unsaved changes before switching accounts", async () => {
+  it("protects unsaved changes before opening the works list", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
-    const onSignOut = vi.fn();
+    const onOpenWorks = vi.fn();
     render(
       <EditorPage
-        onSignOut={onSignOut}
+        onOpenWorks={onOpenWorks}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -597,23 +550,21 @@ describe("EditorPage", () => {
     await user.clear(input);
     await user.type(input, "未保存后切号");
 
-    await user.click(screen.getByRole("button", { name: "切换账号" }));
+    await user.click(screen.getByRole("button", { name: "作品列表" }));
     expect(screen.getByRole("dialog", { name: "当前修改尚未保存" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "直接离开" }));
 
-    expect(onSignOut).toHaveBeenCalledOnce();
+    expect(onOpenWorks).toHaveBeenCalledOnce();
   });
 
   it("saves the current draft before opening the replacement picker", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     const inputClick = vi
       .spyOn(HTMLInputElement.prototype, "click")
       .mockImplementation(() => {});
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -630,7 +581,7 @@ describe("EditorPage", () => {
     await user.click(screen.getByRole("button", { name: "保存草稿并替换" }));
 
     expect(inputClick).toHaveBeenCalledOnce();
-    expect(getActiveUserWork("work-image")).toMatchObject({
+    expect(getWork("work-image")).toMatchObject({
       name: "替换前保存的草稿",
       status: "draft",
     });
@@ -638,7 +589,6 @@ describe("EditorPage", () => {
 
   it("does not open the replacement picker when drafting before replace fails", async () => {
     const user = userEvent.setup();
-    login();
     seedImageWork();
     const inputClick = vi
       .spyOn(HTMLInputElement.prototype, "click")
@@ -650,7 +600,6 @@ describe("EditorPage", () => {
       });
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="work-image"
@@ -666,13 +615,12 @@ describe("EditorPage", () => {
 
     expect(inputClick).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent("保存失败，请重试");
-    expect(getActiveUserWork("work-image")?.name).toBe("已有图片作品");
+    expect(getWork("work-image")?.name).toBe("已有图片作品");
     setItem.mockRestore();
   });
 
   it("resets image-dependent state after a direct replacement image is chosen", async () => {
     const user = userEvent.setup();
-    login();
     const imageState = {
       ...createDefaultWorkImageState(),
       sourceKind: "upload" as const,
@@ -709,7 +657,6 @@ describe("EditorPage", () => {
     render(
       <EditorPage
         autosaveDelayMs={10}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
         workId="replace-work"
@@ -731,26 +678,24 @@ describe("EditorPage", () => {
     });
 
     await waitFor(() =>
-      expect(getActiveUserWork("replace-work")?.imageState.sourceDataUrl).toBe(
+      expect(getWork("replace-work")?.imageState.sourceDataUrl).toBe(
         replacement.dataUrl,
       ),
     );
-    expect(getActiveUserWork("replace-work")?.imageState).toMatchObject({
+    expect(getWork("replace-work")?.imageState).toMatchObject({
       backgroundRules: [],
       effectMode: "silhouette",
       outlineThickness: 1,
     });
-    expect(getActiveUserWork("replace-work")?.binaryState.overlayData).toBeNull();
+    expect(getWork("replace-work")?.binaryState.overlayData).toBeNull();
   });
 
   it("blocks A4 export for an empty work", async () => {
     const user = userEvent.setup();
-    login();
     const onOpenExport = vi.fn();
     render(
       <EditorPage
         onOpenExport={onOpenExport}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
       />,
@@ -764,12 +709,10 @@ describe("EditorPage", () => {
 
   it("auto-saves a new valid work as completed before entering A4", async () => {
     const user = userEvent.setup();
-    login();
     const onOpenExport = vi.fn();
     render(
       <EditorPage
         onOpenExport={onOpenExport}
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
       />,
@@ -789,7 +732,7 @@ describe("EditorPage", () => {
     await user.click(screen.getByRole("button", { name: "A4 导出" }));
 
     expect(onOpenExport).toHaveBeenCalledOnce();
-    const saved = listActiveUserWorks()[0];
+    const saved = listWorks()[0];
     expect(saved).toMatchObject({
       name: "直接导出作品",
       status: "completed",
@@ -797,31 +740,21 @@ describe("EditorPage", () => {
     expect(peekExportWorkIds()).toEqual([saved.id]);
   });
 
-  it("does not expose a work from another local account", async () => {
-    login();
-    seedImageWork();
-    signOut();
-    login("13900139000", "user-2");
-
+  it("shows a local not-found state for a missing work", async () => {
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
-        workId="work-image"
+        workId="missing-work"
       />,
     );
 
-    expect(
-      await screen.findByText("作品不存在或不属于当前本地账号"),
-    ).toBeVisible();
+    expect(await screen.findByText("作品不存在")).toBeVisible();
   });
 
-  it("does not keep draft, unsaved or local-account notices on the page", () => {
-    login();
+  it("does not keep draft, unsaved or account notices on the page", () => {
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
       />,
@@ -835,10 +768,8 @@ describe("EditorPage", () => {
   });
 
   it("locks the desktop editor shell to the viewport", () => {
-    login();
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
       />,
@@ -850,10 +781,8 @@ describe("EditorPage", () => {
   });
 
   it("keeps the work-name label and input on one line", () => {
-    login();
     render(
       <EditorPage
-        onSignOut={vi.fn()}
         onStartNew={vi.fn()}
         onWorkSaved={vi.fn()}
       />,

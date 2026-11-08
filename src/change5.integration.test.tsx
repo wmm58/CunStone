@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 import { createDefaultWorkImageState } from "./domain/types";
-import { FIXED_TEST_CODE } from "./features/auth/authService";
 import * as imageInput from "./features/editor/imageInput";
 import { setExportWorkIds } from "./features/export/exportSession";
 import { createWork } from "./features/works/workService";
@@ -42,12 +41,9 @@ const preparedSource = {
   },
 };
 
-async function loginWithUi() {
-  const user = userEvent.setup();
-  await user.type(screen.getByLabelText("手机号"), "13800138000");
-  await user.type(screen.getByLabelText("验证码"), FIXED_TEST_CODE);
-  await user.click(screen.getByRole("button", { name: "登录 / 注册" }));
-  return user;
+async function startApp() {
+  window.location.hash = "#/editor/new";
+  return userEvent.setup();
 }
 
 function seedCompleted(
@@ -81,7 +77,7 @@ function seedCompleted(
 describe("Change 5 integration", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    window.location.hash = "#/login";
+    window.location.hash = "#/editor/new";
     setExportWorkIds([]);
     downloadPdfMock.mockClear();
     downloadPdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70]));
@@ -90,7 +86,7 @@ describe("Change 5 integration", () => {
 
   it("adds P3 selected works to P4, auto-paginates and downloads through the PDF action", async () => {
     render(<App />);
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
 
     for (let index = 0; index < 8; index += 1) {
@@ -126,7 +122,7 @@ describe("Change 5 integration", () => {
   it("allows a completed P2 work to enter P4 directly", async () => {
     render(<App />);
 
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
     seedCompleted("completed-direct", "直接导出作品", 40, 40, true);
 

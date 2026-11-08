@@ -2,8 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FIXED_TEST_CODE, loginWithFixedCode } from "../features/auth/authService";
-import { createWork, listActiveUserWorks } from "../features/works/workService";
+import { createWork, listWorks } from "../features/works/workService";
 import WorksPage from "./WorksPage";
 
 vi.mock("../features/works/WorkPreviewCanvas", () => ({
@@ -19,13 +18,6 @@ vi.mock("../features/works/WorkPreviewCanvas", () => ({
     </div>
   ),
 }));
-
-function login() {
-  loginWithFixedCode(
-    { phone: "13800138000", code: FIXED_TEST_CODE },
-    { createId: () => "user-1" },
-  );
-}
 
 function seedWorks() {
   createWork(
@@ -56,14 +48,12 @@ function pageProps() {
     onEditWork: vi.fn(),
     onNewWork: vi.fn(),
     onOpenExport: vi.fn(),
-    onSignOut: vi.fn(),
   };
 }
 
 describe("WorksPage", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    login();
   });
 
   it("filters works by all, completed and draft", async () => {
@@ -126,7 +116,7 @@ describe("WorksPage", () => {
     const dialog = screen.getByRole("dialog", { name: "删除作品确认" });
     expect(dialog).toHaveTextContent("2 件");
     await user.click(within(dialog).getByRole("button", { name: "取消" }));
-    expect(listActiveUserWorks()).toHaveLength(3);
+    expect(listWorks()).toHaveLength(3);
 
     await user.click(screen.getByRole("button", { name: "删除" }));
     await user.click(
@@ -136,7 +126,7 @@ describe("WorksPage", () => {
       ),
     );
 
-    await waitFor(() => expect(listActiveUserWorks()).toHaveLength(1));
+    await waitFor(() => expect(listWorks()).toHaveLength(1));
     await user.click(screen.getByRole("button", { name: "全部作品" }));
     expect(screen.getByText("草稿作品")).toBeInTheDocument();
     expect(screen.queryByText("完成作品甲")).not.toBeInTheDocument();
@@ -175,7 +165,7 @@ describe("WorksPage", () => {
     );
 
     await waitFor(() =>
-      expect(listActiveUserWorks().map((work) => work.name)).toEqual([
+      expect(listWorks().map((work) => work.name)).toEqual([
         "完成作品乙",
         "完成作品甲",
       ]),

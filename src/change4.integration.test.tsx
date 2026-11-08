@@ -4,11 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 import { createDefaultWorkImageState } from "./domain/types";
-import { FIXED_TEST_CODE } from "./features/auth/authService";
 import * as imageInput from "./features/editor/imageInput";
 import {
   createWork,
-  listActiveUserWorks,
+  listWorks,
 } from "./features/works/workService";
 import { installCanvasMock } from "./test/canvasMock";
 
@@ -40,12 +39,9 @@ const prepared = {
   },
 };
 
-async function loginWithUi() {
-  const user = userEvent.setup();
-  await user.type(screen.getByLabelText("手机号"), "13800138000");
-  await user.type(screen.getByLabelText("验证码"), FIXED_TEST_CODE);
-  await user.click(screen.getByRole("button", { name: "登录 / 注册" }));
-  return user;
+async function startApp() {
+  window.location.hash = "#/editor/new";
+  return userEvent.setup();
 }
 
 describe("Change 4 integration", () => {
@@ -53,7 +49,7 @@ describe("Change 4 integration", () => {
 
   beforeEach(() => {
     window.localStorage.clear();
-    window.location.hash = "#/login";
+    window.location.hash = "#/editor/new";
     canvasMock = installCanvasMock();
     vi.mocked(imageInput.prepareSourceDataUrl).mockReset();
     vi.mocked(imageInput.prepareSourceDataUrl).mockResolvedValue(prepared);
@@ -67,7 +63,7 @@ describe("Change 4 integration", () => {
 
   it("navigates from P2, previews, filters and permanently deletes completed works", async () => {
     render(<App />);
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
 
     createWork(
@@ -123,7 +119,7 @@ describe("Change 4 integration", () => {
     );
 
     await waitFor(() =>
-      expect(listActiveUserWorks().map((work) => work.name)).toEqual([
+      expect(listWorks().map((work) => work.name)).toEqual([
         "草稿作品",
       ]),
     );

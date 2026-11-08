@@ -2,12 +2,11 @@ import { useEffect, useState } from "react";
 
 import BrandHeader from "../components/BrandHeader";
 import type { WorkRecord } from "../domain/types";
-import { getActiveUser } from "../features/auth/authService";
 import { setExportWorkIds } from "../features/export/exportSession";
 import WorkPreviewCanvas from "../features/works/WorkPreviewCanvas";
 import {
-  deleteActiveUserWorks,
-  listActiveUserWorksByStatus,
+  deleteWorks,
+  listWorksByStatus,
   type WorkFilter,
 } from "../features/works/workService";
 
@@ -15,7 +14,6 @@ interface WorksPageProps {
   onNewWork: () => void;
   onEditWork: (workId: string) => void;
   onOpenExport: () => void;
-  onSignOut: () => void;
 }
 
 const FILTERS: Array<{ value: WorkFilter; label: string }> = [
@@ -28,7 +26,6 @@ export default function WorksPage({
   onNewWork,
   onEditWork,
   onOpenExport,
-  onSignOut,
 }: WorksPageProps) {
   const [filter, setFilter] = useState<WorkFilter>("all");
   const [works, setWorks] = useState<WorkRecord[]>([]);
@@ -38,10 +35,8 @@ export default function WorksPage({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-  const activeUser = getActiveUser();
-
   useEffect(() => {
-    setWorks(listActiveUserWorksByStatus(filter));
+    setWorks(listWorksByStatus(filter));
     setSelected(new Set());
     setError("");
   }, [filter, refreshKey]);
@@ -72,13 +67,9 @@ export default function WorksPage({
   }
 
   function confirmDelete() {
-    const result = deleteActiveUserWorks([...selected]);
+    const result = deleteWorks([...selected]);
     if (!result.ok) {
-      setError(
-        result.error === "no-active-user"
-          ? "当前本地账号不可用"
-          : "删除失败，请重试",
-      );
+      setError("删除失败，请重试");
       setDeleteOpen(false);
       return;
     }
@@ -94,30 +85,16 @@ export default function WorksPage({
         <div className="mb-6">
           <BrandHeader
             actions={
-              <>
-                <button
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                  onClick={onSignOut}
-                  type="button"
-                >
-                  切换账号
-                </button>
-                <button
-                  className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-                  onClick={onNewWork}
-                  type="button"
-                >
-                  新建作品
-                </button>
-              </>
+              <button
+                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                onClick={onNewWork}
+                type="button"
+              >
+                新建作品
+              </button>
             }
             pageTitle="作品列表"
           />
-          {activeUser ? (
-            <p className="mt-2 text-xs text-slate-500">
-              当前账号：{activeUser.phone}
-            </p>
-          ) : null}
         </div>
 
         <section className="rounded-2xl border border-slate-300 bg-white p-5">

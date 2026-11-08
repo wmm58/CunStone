@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 
 export type AppRoute =
-  | { name: "login" }
   | { name: "works" }
   | { name: "exportA4" }
   | { name: "editor"; workId?: string };
 
 export function parseRoute(hash: string): AppRoute {
-  const path = hash.replace(/^#/, "") || "/login";
+  const path = hash.replace(/^#/, "") || "/editor/new";
 
   if (path === "/editor/new" || path === "/editor") {
     return { name: "editor" };
@@ -26,7 +25,7 @@ export function parseRoute(hash: string): AppRoute {
     return { name: "editor", workId: decodeURIComponent(editMatch[1]) };
   }
 
-  return { name: "login" };
+  return { name: "editor" };
 }
 
 export function navigate(path: string): void {
@@ -43,8 +42,8 @@ export function useHashRoute(): AppRoute {
     const onChange = () => setHash(window.location.hash);
     window.addEventListener("hashchange", onChange);
 
-    if (!window.location.hash) {
-      navigate("/login");
+    if (!window.location.hash || window.location.hash === "#/login") {
+      navigate("/editor/new");
     }
 
     return () => window.removeEventListener("hashchange", onChange);

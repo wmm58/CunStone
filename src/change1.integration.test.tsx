@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import { FIXED_TEST_CODE } from "./features/auth/authService";
 import * as imageInput from "./features/editor/imageInput";
 import { readAppState } from "./lib/storage/appStorage";
 
@@ -33,14 +32,6 @@ const prepared = {
   },
 };
 
-async function loginWithUi(phone: string) {
-  const user = userEvent.setup();
-  await user.type(screen.getByLabelText("手机号"), phone);
-  await user.type(screen.getByLabelText("验证码"), FIXED_TEST_CODE);
-  await user.click(screen.getByRole("button", { name: "登录 / 注册" }));
-  return user;
-}
-
 async function uploadImage() {
   fireEvent.change(screen.getByLabelText("上传图片"), {
     target: {
@@ -56,20 +47,21 @@ async function uploadImage() {
 describe("Change 1 integration", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    window.location.hash = "#/login";
+    window.location.hash = "#/editor/new";
     vi.mocked(imageInput.prepareSourceFile).mockReset();
     vi.mocked(imageInput.prepareSourceDataUrl).mockReset();
     vi.mocked(imageInput.prepareSourceFile).mockResolvedValue(prepared);
     vi.mocked(imageInput.prepareSourceDataUrl).mockResolvedValue(prepared);
   });
 
-  it("completes login, draft creation, account switch, and same-browser resume", async () => {
+  it("creates a draft without login and restores it in the same browser", async () => {
+    const user = userEvent.setup();
     render(<App />);
-    const user = await loginWithUi("13800138000");
 
     expect(
       await screen.findByRole("heading", { name: "创作编辑" }),
     ).toBeInTheDocument();
+    expect(screen.queryByLabelText("手机号")).not.toBeInTheDocument();
 
     const nameInput = screen.getByLabelText("作品名称");
     await user.clear(nameInput);
@@ -79,17 +71,12 @@ describe("Change 1 integration", () => {
     await screen.findByRole("dialog", { name: "草稿已保存" });
     await user.click(screen.getByRole("button", { name: "知道了" }));
 
-    await waitFor(() => {
-      expect(readAppState().state.works).toHaveLength(1);
-    });
+    await waitFor(() => expect(readAppState().state.works).toHaveLength(1));
     const work = readAppState().state.works[0];
     const workHash = `#/editor/${work.id}`;
 
-    await waitFor(() => expect(window.location.hash).toBe(workHash));
-    await user.click(screen.getByRole("button", { name: "切换账号" }));
-    await screen.findByRole("heading", { name: "登录 / 注册" });
-    await loginWithUi("13800138000");
-    await screen.findByRole("heading", { name: "创作编辑" });
+    await user.click(screen.getByRole("button", { name: "作品列表" }));
+    expect(await screen.findByText("跨页面恢复作品")).toBeVisible();
 
     act(() => {
       window.location.hash = workHash;
@@ -97,41 +84,19 @@ describe("Change 1 integration", () => {
     });
 
     expect(await screen.findByDisplayValue("跨页面恢复作品")).toBeVisible();
-    expect(screen.getByLabelText("作品名称")).toHaveValue("跨页面恢复作品");
+    expect(readAppState().state.works[0]).not.toHaveProperty("ownerId");
   });
 
-  it("does not expose one local account's work to another local account", async () => {
+  it("shows a local not-found page for an unknown work id", async () => {
+    window.location.hash = "#/editor/missing-work";
     render(<App />);
-    const user = await loginWithUi("13800138000");
-    await screen.findByRole("heading", { name: "创作编辑" });
 
-    const nameInput = screen.getByLabelText("作品名称");
-    await user.clear(nameInput);
-    await user.type(nameInput, "账号一的作品");
-    await uploadImage();
-    await user.click(screen.getByRole("button", { name: "草稿" }));
-    await waitFor(() => expect(readAppState().state.works).toHaveLength(1));
-    const workHash = `#/editor/${readAppState().state.works[0].id}`;
-
-    await user.click(screen.getByRole("button", { name: "切换账号" }));
-    await screen.findByRole("heading", { name: "登录 / 注册" });
-    await loginWithUi("13900139000");
-    await screen.findByRole("heading", { name: "创作编辑" });
-
-    act(() => {
-      window.location.hash = workHash;
-      window.dispatchEvent(new HashChangeEvent("hashchange"));
-    });
-
-    expect(
-      await screen.findByText("作品不存在或不属于当前本地账号"),
-    ).toBeVisible();
-    expect(screen.queryByDisplayValue("账号一的作品")).not.toBeInTheDocument();
+    expect(await screen.findByText("作品不存在")).toBeVisible();
+    expect(screen.queryByText("切换账号")).not.toBeInTheDocument();
   });
 
-  it("returns to login after local site data is cleared", async () => {
+  it("starts with a blank editor after local site data is cleared", async () => {
     const firstRender = render(<App />);
-    await loginWithUi("13800138000");
     await screen.findByRole("heading", { name: "创作编辑" });
 
     firstRender.unmount();
@@ -140,12 +105,12 @@ describe("Change 1 integration", () => {
       window.location.hash = "#/editor/new";
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
-
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "登录 / 注册" }),
+      await screen.findByRole("heading", { name: "创作编辑" }),
     ).toBeInTheDocument();
-    expect(window.location.hash).toBe("#/login");
+    expect(window.location.hash).toBe("#/editor/new");
+    expect(readAppState().state.works).toEqual([]);
   });
 });

@@ -6,10 +6,9 @@ import {
   type WorkRecord,
   type WorkStatus,
 } from "../../domain/types";
-import { getActiveUser } from "../auth/authService";
 import { readAppState, writeAppState } from "../../lib/storage/appStorage";
 
-type WorkError = "no-active-user" | "invalid-name" | "not-found";
+type WorkError = "invalid-name" | "not-found";
 
 interface WorkOptions {
   createId?: () => string;
@@ -32,16 +31,13 @@ export type WorkFilter = "all" | WorkStatus;
 
 export type DeleteWorksResult =
   | { ok: true; deletedCount: number }
-  | { ok: false; error: "no-active-user" | "storage" };
+  | { ok: false; error: "storage" };
 
-export function createWork(input: WorkInput, options: WorkOptions = {}): WorkResult {
+export function createWork(
+  input: WorkInput,
+  options: WorkOptions = {},
+): WorkResult {
   const storage = options.storage ?? window.localStorage;
-  const activeUser = getActiveUser({ storage });
-
-  if (!activeUser) {
-    return { ok: false, error: "no-active-user" };
-  }
-
   const name = input.name.trim();
   if (!name) {
     return { ok: false, error: "invalid-name" };
@@ -50,7 +46,6 @@ export function createWork(input: WorkInput, options: WorkOptions = {}): WorkRes
   const timestamp = (options.now ?? now)();
   const work: WorkRecord = {
     id: (options.createId ?? createId)(),
-    ownerId: activeUser.id,
     name,
     status: input.status,
     createdAt: timestamp,
@@ -71,22 +66,13 @@ export function updateWork(
   options: WorkOptions = {},
 ): WorkResult {
   const storage = options.storage ?? window.localStorage;
-  const activeUser = getActiveUser({ storage });
-
-  if (!activeUser) {
-    return { ok: false, error: "no-active-user" };
-  }
-
   const name = input.name.trim();
   if (!name) {
     return { ok: false, error: "invalid-name" };
   }
 
   const state = readAppState(storage).state;
-  const index = state.works.findIndex(
-    (work) => work.id === workId && work.ownerId === activeUser.id,
-  );
-
+  const index = state.works.findIndex((work) => work.id === workId);
   if (index === -1) {
     return { ok: false, error: "not-found" };
   }
@@ -107,66 +93,47 @@ export function updateWork(
   return { ok: true, work };
 }
 
-export function getActiveUserWork(
+export function getWork(
   workId: string,
   options: Pick<WorkOptions, "storage"> = {},
 ): WorkRecord | null {
-  const storage = options.storage ?? window.localStorage;
-  const activeUser = getActiveUser({ storage });
-  if (!activeUser) {
-    return null;
-  }
-
   return (
-    readAppState(storage).state.works.find(
-      (work) => work.id === workId && work.ownerId === activeUser.id,
+    readAppState(options.storage ?? window.localStorage).state.works.find(
+      (work) => work.id === workId,
     ) ?? null
   );
 }
 
-export function listActiveUserWorks(
+export function listWorks(
   options: Pick<WorkOptions, "storage"> = {},
 ): WorkRecord[] {
-  const storage = options.storage ?? window.localStorage;
-  const activeUser = getActiveUser({ storage });
-  if (!activeUser) {
-    return [];
-  }
-
-  return readAppState(storage)
-    .state.works.filter((work) => work.ownerId === activeUser.id)
-    .sort((left, right) => right.lastSavedAt.localeCompare(left.lastSavedAt));
+  return [...readAppState(options.storage ?? window.localStorage).state.works].sort(
+    (left, right) => right.lastSavedAt.localeCompare(left.lastSavedAt),
+  );
 }
 
-export function listActiveUserWorksByStatus(
+export function listWorksByStatus(
   filter: WorkFilter,
   options: Pick<WorkOptions, "storage"> = {},
 ): WorkRecord[] {
-  const works = listActiveUserWorks(options);
+  const works = listWorks(options);
   return filter === "all"
     ? works
     : works.filter((work) => work.status === filter);
 }
 
-export function deleteActiveUserWorks(
+export function deleteWorks(
   workIds: readonly string[],
   options: Pick<WorkOptions, "storage"> = {},
 ): DeleteWorksResult {
   const storage = options.storage ?? window.localStorage;
-  const activeUser = getActiveUser({ storage });
-  if (!activeUser) {
-    return { ok: false, error: "no-active-user" };
-  }
-
   const requestedIds = new Set(workIds);
   if (requestedIds.size === 0) {
     return { ok: true, deletedCount: 0 };
   }
 
   const state = readAppState(storage).state;
-  const remaining = state.works.filter(
-    (work) => !(work.ownerId === activeUser.id && requestedIds.has(work.id)),
-  );
+  const remaining = state.works.filter((work) => !requestedIds.has(work.id));
   const deletedCount = state.works.length - remaining.length;
   if (deletedCount === 0) {
     return { ok: true, deletedCount: 0 };

@@ -3,11 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import { FIXED_TEST_CODE } from "./features/auth/authService";
 import * as imageInput from "./features/editor/imageInput";
-import { APP_STORAGE_KEY, readAppState } from "./lib/storage/appStorage";
+import { readAppState } from "./lib/storage/appStorage";
 import { installCanvasMock } from "./test/canvasMock";
-import { createV3MigrationFixtures } from "./test/migrationFixtures";
 
 vi.mock("./features/editor/imageInput", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./features/editor/imageInput")>();
@@ -50,12 +48,9 @@ function mockCanvasRect(canvas: HTMLElement) {
   });
 }
 
-async function loginWithUi() {
-  const user = userEvent.setup();
-  await user.type(screen.getByLabelText("手机号"), "13800138000");
-  await user.type(screen.getByLabelText("验证码"), FIXED_TEST_CODE);
-  await user.click(screen.getByRole("button", { name: "登录 / 注册" }));
-  return user;
+async function startApp() {
+  window.location.hash = "#/editor/new";
+  return userEvent.setup();
 }
 
 async function uploadImage() {
@@ -83,7 +78,7 @@ describe("Change 2 integration", () => {
 
   beforeEach(() => {
     window.localStorage.clear();
-    window.location.hash = "#/login";
+    window.location.hash = "#/editor/new";
     canvasMock = installCanvasMock();
     vi.mocked(imageInput.prepareSourceFile).mockReset();
     vi.mocked(imageInput.prepareSourceDataUrl).mockReset();
@@ -99,7 +94,7 @@ describe("Change 2 integration", () => {
 
   it("uploads, applies a background rule, edits effect, saves and reopens the work", async () => {
     const firstRender = render(<App />);
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
 
     await uploadImage();
@@ -155,160 +150,9 @@ describe("Change 2 integration", () => {
     expect(await screen.findByLabelText("黑白稿编辑画布")).toBeVisible();
   }, 30_000);
 
-  it("keeps historical drawing works readable without exposing a new drawing entry", async () => {
-    const fixtures = createV3MigrationFixtures();
-    window.localStorage.setItem(
-      APP_STORAGE_KEY,
-      JSON.stringify({
-        ...fixtures,
-        works: fixtures.works.filter((work) => work.id === "legacy-drawing"),
-      }),
-    );
-    window.location.hash = "#/editor/legacy-drawing";
-
-    render(<App />);
-
-    expect(await screen.findByDisplayValue("legacy-drawing")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "手绘画布" })).not.toBeInTheDocument();
-    expect(await screen.findByLabelText("编辑画布")).toBeVisible();
-    const binaryButton = screen.getByRole("button", { name: "黑白稿编辑" });
-    await waitFor(() => expect(binaryButton).toBeEnabled());
-    userEvent.setup().click(binaryButton);
-    expect(await screen.findByLabelText("黑白稿编辑画布")).toBeVisible();
-  });
-
-  it("opens a migrated v1 work with an empty v5 image state", async () => {
-    window.localStorage.setItem(
-      APP_STORAGE_KEY,
-      JSON.stringify({
-        version: 1,
-        activeUserId: "user-1",
-        users: [
-          {
-            id: "user-1",
-            phone: "13800138000",
-            createdAt: "2026-11-02T10:00:00.000Z",
-          },
-        ],
-        works: [
-          {
-            id: "work-1",
-            ownerId: "user-1",
-            name: "旧版作品",
-            status: "draft",
-            createdAt: "2026-11-02T10:01:00.000Z",
-            lastSavedAt: "2026-11-02T10:02:00.000Z",
-          },
-        ],
-      }),
-    );
-    window.location.hash = "#/editor/work-1";
-
-    render(<App />);
-
-    expect(await screen.findByDisplayValue("旧版作品")).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "点击画布中心上传图片" }),
-    ).toBeVisible();
-    await waitFor(() => {
-      const stored = JSON.parse(
-        window.localStorage.getItem(APP_STORAGE_KEY) ?? "{}",
-      );
-      expect(stored).toMatchObject({
-        version: 7,
-        works: [
-          {
-            id: "work-1",
-            imageState: {
-              backgroundRules: [],
-              outlineThickness: 1,
-              sharpenAmount: 1,
-              outerMarginMm: 0,
-              imageEraserSize: 24,
-              processingVersion: 5,
-            },
-            binaryState: {
-              borderThickness: 2,
-              borderMarginMm: 0,
-              eraserSize: 6,
-              editVersion: 4,
-            },
-          },
-        ],
-      });
-    });
-  });
-
-  it("migrates a v2 single background into a v7 rule and default binary state", async () => {
-    window.localStorage.setItem(
-      APP_STORAGE_KEY,
-      JSON.stringify({
-        version: 2,
-        activeUserId: "user-1",
-        users: [
-          {
-            id: "user-1",
-            phone: "13800138000",
-            createdAt: "2026-11-02T10:00:00.000Z",
-          },
-        ],
-        works: [
-          {
-            id: "work-2",
-            ownerId: "user-1",
-            name: "第二版作品",
-            status: "completed",
-            createdAt: "2026-11-02T10:01:00.000Z",
-            lastSavedAt: "2026-11-02T10:02:00.000Z",
-            imageState: {
-              sourceKind: "upload",
-              sourceDataUrl: prepared.dataUrl,
-              shape: "square",
-              widthMm: 25,
-              heightMm: 25,
-              backgroundColor: "#ffffff",
-              tolerance: 35,
-              effectMode: "outline",
-              processingVersion: 1,
-            },
-          },
-        ],
-      }),
-    );
-    window.location.hash = "#/editor/work-2";
-
-    render(<App />);
-
-    expect(await screen.findByDisplayValue("第二版作品")).toBeVisible();
-    expect(screen.getByLabelText("颜色 1 容差")).toHaveValue("35");
-    const binaryButton = screen.getByRole("button", { name: "黑白稿编辑" });
-    await waitFor(() => expect(binaryButton).toBeEnabled());
-    await userEvent.setup().click(binaryButton);
-    expect(screen.getByRole("button", { name: "轮廓线稿" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByLabelText("画笔大小")).toHaveValue("6");
-    expect(screen.getByLabelText("边框粗细")).toHaveValue("2");
-
-    await waitFor(() => {
-      const saved = readAppState().state.works[0];
-      expect(saved.imageState.backgroundRules).toEqual([
-        expect.objectContaining({ color: "#ffffff", tolerance: 35 }),
-      ]);
-      expect(saved.binaryState).toMatchObject({
-        borderStyle: "none",
-        borderThickness: 2,
-        borderMarginMm: 0,
-        eraserSize: 6,
-        editVersion: 4,
-      });
-    });
-  });
-
   it("autosaves multiple background rules and binary settings after content is ready", async () => {
     const firstRender = render(<App />);
-    const user = await loginWithUi();
+    const user = await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
     await user.clear(screen.getByLabelText("作品名称"));
     await user.type(screen.getByLabelText("作品名称"), "自动恢复作品");
@@ -330,11 +174,6 @@ describe("Change 2 integration", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "切换账号" }));
-    expect(await screen.findByLabelText("手机号")).toBeVisible();
-    await loginWithUi();
-    await screen.findByRole("heading", { name: "创作编辑" });
-
     firstRender.unmount();
     window.location.hash = `#/editor/${workId}`;
     render(<App />);
@@ -352,7 +191,7 @@ describe("Change 2 integration", () => {
 
   it("does not expose P4, PDF, red-preview or carving-check content from P2", async () => {
     render(<App />);
-    await loginWithUi();
+    await startApp();
     await screen.findByRole("heading", { name: "创作编辑" });
 
     for (const name of ["预览", "A4 排版", "下载 PDF", "自动可刻性检查"]) {

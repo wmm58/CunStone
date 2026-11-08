@@ -20,7 +20,6 @@ vi.mock("../editor/imageInput", async (importOriginal) => {
 
 const work: WorkRecord = {
   id: "work-1",
-  ownerId: "user-1",
   name: "预览作品",
   status: "completed",
   createdAt: "2026-11-07T10:00:00.000Z",
