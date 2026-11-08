@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 
+import BrandHeader from "../components/BrandHeader";
 import {
   FIXED_TEST_CODE,
   isValidPhone,
@@ -47,23 +48,25 @@ export default function LoginPage({ onSuccess, storageNotice }: LoginPageProps) 
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-6">
-      <section className="w-full max-w-md rounded-2xl border border-slate-300 bg-white p-8 shadow-sm">
-        <p className="mb-2 text-xs font-semibold tracking-[0.18em] text-slate-500">
-          CUNSTONE · 本地原型
-        </p>
-        <h1 className="mb-2 text-2xl font-bold text-slate-950">登录 / 注册</h1>
-        <p className="mb-6 text-sm leading-6 text-slate-600">
-          使用手机号和固定测试验证码进入本地创作编辑页。
-        </p>
+    <main className="min-h-screen bg-slate-100 px-6 py-6">
+      <div className="mx-auto max-w-6xl">
+        <BrandHeader pageTitle="登录 / 注册" />
+        <div className="flex justify-center py-10">
+          <section className="w-full max-w-md rounded-2xl border border-slate-300 bg-white p-8 shadow-sm">
+            <h2 className="mb-2 text-xl font-semibold tracking-[0.04em] text-slate-950">
+              手机号登录
+            </h2>
+            <p className="mb-6 text-sm leading-6 text-slate-600">
+              使用手机号和固定测试验证码进入本地创作编辑页。
+            </p>
 
-        {storageNotice ? (
-          <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            {storageNotice}
-          </p>
-        ) : null}
+            {storageNotice ? (
+              <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {storageNotice}
+              </p>
+            ) : null}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-4" onSubmit={handleSubmit}>
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-700">手机号</span>
             <input
@@ -117,12 +120,14 @@ export default function LoginPage({ onSuccess, storageNotice }: LoginPageProps) 
           >
             登录 / 注册
           </button>
-        </form>
+            </form>
 
-        <p className="mt-5 text-xs leading-5 text-slate-500">
-          本地演示能力：数据仅保存在当前浏览器，不代表真实账号安全体系。
-        </p>
-      </section>
+            <p className="mt-5 text-xs leading-5 text-slate-500">
+              本地演示能力：数据仅保存在当前浏览器，不代表真实账号安全体系。
+            </p>
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

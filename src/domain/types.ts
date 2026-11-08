@@ -1,10 +1,40 @@
 export type WorkStatus = "draft" | "completed";
-export type SealShape = "square" | "rectangle" | "circle" | "custom";
+export type SealShape = "square" | "rectangle" | "circle";
 export type EffectMode = "silhouette" | "outline";
 export type ImageSourceKind = "upload" | "drawing";
 export type CarvingMode = "yang" | "yin";
 export type SealOrientation = "normal" | "mirror";
-export type BorderStyle = "none" | "single" | "thick" | "double" | "broken";
+export type BorderStyle = "none" | "single" | "double" | "broken";
+
+export const MAX_BACKGROUND_RULES = 10;
+export const DEFAULT_BACKGROUND_TOLERANCE = 20;
+export const DEFAULT_BORDER_THICKNESS = 2;
+export const MIN_BORDER_THICKNESS = 1;
+export const MAX_BORDER_THICKNESS = 8;
+export const DEFAULT_OUTLINE_THICKNESS = 1;
+export const MIN_OUTLINE_THICKNESS = 1;
+export const MAX_OUTLINE_THICKNESS = 8;
+export const DEFAULT_SHARPEN_AMOUNT = 1;
+export const MIN_SHARPEN_AMOUNT = 0;
+export const MAX_SHARPEN_AMOUNT = 8;
+export const DEFAULT_OUTER_MARGIN_MM = 0;
+export const MIN_OUTER_MARGIN_MM = 0;
+export const MAX_OUTER_MARGIN_MM = 20;
+export const OUTER_MARGIN_STEP_MM = 0.1;
+export const DEFAULT_BORDER_MARGIN_MM = 0;
+export const MIN_BORDER_MARGIN_MM = 0;
+export const MAX_BORDER_MARGIN_MM = 20;
+export const BORDER_MARGIN_STEP_MM = 0.1;
+export const DEFAULT_IMAGE_ERASER_SIZE = 24;
+export const MIN_IMAGE_ERASER_SIZE = 1;
+export const MAX_IMAGE_ERASER_SIZE = 80;
+export const DEFAULT_BINARY_ERASER_SIZE = 6;
+
+export interface BackgroundRemovalRule {
+  id: string;
+  color: string | null;
+  tolerance: number;
+}
 
 export interface WorkImageState {
   sourceKind: ImageSourceKind | null;
@@ -12,10 +42,13 @@ export interface WorkImageState {
   shape: SealShape;
   widthMm: number;
   heightMm: number;
-  backgroundColor: string | null;
-  tolerance: number;
+  backgroundRules: BackgroundRemovalRule[];
   effectMode: EffectMode;
-  processingVersion: 1;
+  outlineThickness: number;
+  sharpenAmount: number;
+  outerMarginMm: number;
+  imageEraserSize: number;
+  processingVersion: 5;
 }
 
 export function createDefaultWorkImageState(): WorkImageState {
@@ -25,10 +58,13 @@ export function createDefaultWorkImageState(): WorkImageState {
     shape: "square",
     widthMm: 25,
     heightMm: 25,
-    backgroundColor: null,
-    tolerance: 20,
+    backgroundRules: [],
     effectMode: "silhouette",
-    processingVersion: 1,
+    outlineThickness: DEFAULT_OUTLINE_THICKNESS,
+    sharpenAmount: DEFAULT_SHARPEN_AMOUNT,
+    outerMarginMm: DEFAULT_OUTER_MARGIN_MM,
+    imageEraserSize: DEFAULT_IMAGE_ERASER_SIZE,
+    processingVersion: 5,
   };
 }
 
@@ -38,10 +74,13 @@ export interface WorkBinaryEditState {
   overlayHeight: number | null;
   generationSignature: string | null;
   brushSize: number;
+  eraserSize: number;
   carvingMode: CarvingMode;
   orientation: SealOrientation;
   borderStyle: BorderStyle;
-  editVersion: 1;
+  borderThickness: number;
+  borderMarginMm: number;
+  editVersion: 4;
 }
 
 export function createDefaultWorkBinaryState(): WorkBinaryEditState {
@@ -51,10 +90,13 @@ export function createDefaultWorkBinaryState(): WorkBinaryEditState {
     overlayHeight: null,
     generationSignature: null,
     brushSize: 6,
+    eraserSize: DEFAULT_BINARY_ERASER_SIZE,
     carvingMode: "yang",
     orientation: "normal",
     borderStyle: "none",
-    editVersion: 1,
+    borderThickness: DEFAULT_BORDER_THICKNESS,
+    borderMarginMm: DEFAULT_BORDER_MARGIN_MM,
+    editVersion: 4,
   };
 }
 

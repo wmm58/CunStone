@@ -33,6 +33,7 @@ describe("BinaryEditorCanvas", () => {
     const props = {
       disabled: false,
       tool: "brush" as const,
+      toolSize: 6,
       onStrokeStart: vi.fn(),
       onStrokeMove: vi.fn(),
       onStrokeEnd: vi.fn(),
@@ -41,12 +42,20 @@ describe("BinaryEditorCanvas", () => {
       <BinaryEditorCanvas {...props} raster={raster} zoom={100} />,
     );
     const canvas = screen.getByLabelText("黑白稿编辑画布");
-    expect(canvas).toHaveStyle({ width: "2px", height: "2px" });
+    expect(canvas).toHaveClass("h-full", "w-full");
+    expect(screen.getByTestId("binary-canvas-frame")).toHaveStyle({
+      aspectRatio: "1 / 1",
+      height: "600px",
+      width: "600px",
+    });
 
     rerender(<BinaryEditorCanvas {...props} raster={raster} zoom={200} />);
-    expect(screen.getByLabelText("黑白稿编辑画布")).toHaveStyle({
-      width: "4px",
-      height: "4px",
+    expect(screen.getByTestId("binary-canvas-frame")).toHaveStyle({
+      height: "1200px",
+      width: "1200px",
+    });
+    expect(canvas).toHaveStyle({
+      imageRendering: "pixelated",
     });
   });
 
@@ -62,6 +71,7 @@ describe("BinaryEditorCanvas", () => {
         onStrokeStart={onStrokeStart}
         raster={raster}
         tool="brush"
+      toolSize={6}
         zoom={400}
       />,
     );
@@ -87,6 +97,35 @@ describe("BinaryEditorCanvas", () => {
     expect(onStrokeEnd).toHaveBeenCalledOnce();
   });
 
+  it("shows the selected brush or eraser size at the pointer", () => {
+    const props = {
+      disabled: false,
+      tool: "eraser" as const,
+      toolSize: 18,
+      onStrokeStart: vi.fn(),
+      onStrokeMove: vi.fn(),
+      onStrokeEnd: vi.fn(),
+    };
+    render(<BinaryEditorCanvas {...props} raster={raster} zoom={100} />);
+    const canvas = screen.getByLabelText("黑白稿编辑画布");
+    vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 100,
+      right: 100,
+      bottom: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    fireEvent.pointerMove(canvas, { clientX: 50, clientY: 50, pointerId: 1 });
+
+    expect(screen.getByTestId("binary-tool-cursor")).toHaveAttribute("r", "9");
+    expect(screen.getByText("橡皮 18px · 100%")).toBeVisible();
+  });
+
   it("does not emit strokes while disabled", () => {
     const onStrokeStart = vi.fn();
     render(
@@ -97,6 +136,7 @@ describe("BinaryEditorCanvas", () => {
         onStrokeStart={onStrokeStart}
         raster={raster}
         tool="eraser"
+        toolSize={6}
         zoom={100}
       />,
     );

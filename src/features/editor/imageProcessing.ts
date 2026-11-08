@@ -1,4 +1,9 @@
-import type { EffectMode, SealShape, WorkImageState } from "../../domain/types";
+import type {
+  BackgroundRemovalRule,
+  EffectMode,
+  SealShape,
+  WorkImageState,
+} from "../../domain/types";
 
 export interface RgbaImage {
   width: number;
@@ -26,6 +31,11 @@ export interface BinaryMask {
 }
 
 const MAX_RGB_DISTANCE = Math.sqrt(3) * 255;
+
+interface ParsedBackgroundRule {
+  color: RgbColor;
+  threshold: number;
+}
 
 export function parseHexColor(input: string): RgbColor | null {
   const value = input.trim().replace(/^#/, "");
@@ -68,11 +78,9 @@ export function toleranceToDistance(tolerance: number): number {
 
 export function createSubjectMask(
   source: RgbaImage,
-  backgroundColor: string | null,
-  tolerance: number,
+  backgroundRules: readonly BackgroundRemovalRule[],
 ): Uint8Array {
-  const background = backgroundColor ? parseHexColor(backgroundColor) : null;
-  const threshold = toleranceToDistance(tolerance);
+  const parsedRules = parseBackgroundRules(backgroundRules);
   const mask = new Uint8Array(source.width * source.height);
 
   for (let index = 0; index < mask.length; index += 1) {
@@ -82,18 +90,13 @@ export function createSubjectMask(
       continue;
     }
 
-    if (background) {
-      const distance = colorDistance(
-        {
-          r: source.data[offset],
-          g: source.data[offset + 1],
-          b: source.data[offset + 2],
-        },
-        background,
-      );
-      if (distance <= threshold) {
-        continue;
-      }
+    const color = {
+      r: source.data[offset],
+      g: source.data[offset + 1],
+      b: source.data[offset + 2],
+    };
+    if (isBackgroundColor(color, parsedRules)) {
+      continue;
     }
 
     mask[index] = 1;
@@ -156,17 +159,29 @@ export function sharpenMask(
   mask: Uint8Array,
   width: number,
   height: number,
+  amount = 1,
 ): Uint8Array {
-  const result = new Uint8Array(mask.length);
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const center = mask[y * width + x];
-      const top = y > 0 ? mask[(y - 1) * width + x] : 0;
-      const bottom = y < height - 1 ? mask[(y + 1) * width + x] : 0;
-      const left = x > 0 ? mask[y * width + x - 1] : 0;
-      const right = x < width - 1 ? mask[y * width + x + 1] : 0;
-      result[y * width + x] =
-        center * 5 - top - bottom - left - right >= 1 ? 1 : 0;
+  let result = new Uint8Array(mask);
+  const iterations = Math.max(0, Math.min(8, Math.round(amount)));
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const current = result;
+    result = new Uint8Array(mask.length);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const index = y * width + x;
+        if (current[index] === 1) {
+          result[index] = 1;
+          continue;
+        }
+        const hasBlackNeighbor =
+          (x > 0 && current[index - 1] === 1) ||
+          (x < width - 1 && current[index + 1] === 1) ||
+          (y > 0 && current[index - width] === 1) ||
+          (y < height - 1 && current[index + width] === 1);
+        if (hasBlackNeighbor) {
+          result[index] = 1;
+        }
+      }
     }
   }
   return result;
@@ -180,10 +195,18 @@ export function fitMaskToShape(
   widthMm: number,
   heightMm: number,
   maxDimension = 512,
+  outerMarginMm = 0,
 ): BinaryMask {
   const dimensions = getDraftDimensions(shape, widthMm, heightMm, maxDimension);
   const output = new Uint8Array(dimensions.width * dimensions.height);
-  const inner = getInnerFitSize(shape, dimensions.width, dimensions.height);
+  const inner = getInnerFitSize(
+    shape,
+    dimensions.width,
+    dimensions.height,
+    widthMm,
+    heightMm,
+    outerMarginMm,
+  );
   const scale = Math.min(inner.width / width, inner.height / height);
   const targetWidth = Math.max(1, Math.round(width * scale));
   const targetHeight = Math.max(1, Math.round(height * scale));
@@ -214,14 +237,12 @@ export function fitMaskToShape(
 
 export function createCutoutImage(
   source: RgbaImage,
-  backgroundColor: string | null,
-  tolerance: number,
+  backgroundRules: readonly BackgroundRemovalRule[],
 ): RgbaImage {
-  const background = backgroundColor ? parseHexColor(backgroundColor) : null;
-  const threshold = toleranceToDistance(tolerance);
+  const parsedRules = parseBackgroundRules(backgroundRules);
   const data = new Uint8ClampedArray(source.data);
 
-  if (!background) {
+  if (parsedRules.length === 0) {
     return { ...source, data };
   }
 
@@ -229,11 +250,12 @@ export function createCutoutImage(
     if (data[offset + 3] === 0) {
       continue;
     }
-    const distance = colorDistance(
-      { r: data[offset], g: data[offset + 1], b: data[offset + 2] },
-      background,
-    );
-    if (distance <= threshold) {
+    const color = {
+      r: data[offset],
+      g: data[offset + 1],
+      b: data[offset + 2],
+    };
+    if (isBackgroundColor(color, parsedRules)) {
       data[offset + 3] = 0;
     }
   }
@@ -246,9 +268,10 @@ export function renderBinaryDraft(
   state: WorkImageState,
 ): RgbaImage {
   const mask = sharpenMask(
-    createSubjectMask(source, state.backgroundColor, state.tolerance),
+    createSubjectMask(source, state.backgroundRules),
     source.width,
     source.height,
+    state.sharpenAmount,
   );
   const bounds = findMaskBounds(mask, source.width, source.height);
 
@@ -264,8 +287,14 @@ export function renderBinaryDraft(
     state.shape,
     state.widthMm,
     state.heightMm,
+    512,
+    state.outerMarginMm,
   );
-  return renderBinaryMask(fitted, state.effectMode);
+  return renderBinaryMaskWithOutline(
+    fitted,
+    state.effectMode,
+    state.outlineThickness,
+  );
 }
 
 export function isBinaryBlackWhite(image: RgbaImage): boolean {
@@ -302,19 +331,70 @@ function createBlankDraft(
 }
 
 function renderBinaryMask(mask: BinaryMask, effectMode: EffectMode): RgbaImage {
+  return renderBinaryMaskWithOutline(mask, effectMode, 1);
+}
+
+export function renderBinaryMaskWithOutline(
+  mask: BinaryMask,
+  effectMode: EffectMode,
+  outlineThickness: number,
+): RgbaImage {
   const data = new Uint8ClampedArray(mask.width * mask.height * 4);
+  const outline =
+    effectMode === "outline"
+      ? createThickOutline(mask.mask, mask.width, mask.height, outlineThickness)
+      : null;
 
   for (let y = 0; y < mask.height; y += 1) {
     for (let x = 0; x < mask.width; x += 1) {
       const black =
         effectMode === "silhouette"
           ? mask.mask[y * mask.width + x] === 1
-          : isOutlinePixel(mask.mask, mask.width, mask.height, x, y);
+          : outline?.[y * mask.width + x] === 1;
       data.set(black ? [0, 0, 0, 255] : [255, 255, 255, 255], (y * mask.width + x) * 4);
     }
   }
 
   return { width: mask.width, height: mask.height, data };
+}
+
+function createThickOutline(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  thickness: number,
+): Uint8Array {
+  let outline = new Uint8Array(width * height);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (isOutlinePixel(mask, width, height, x, y)) {
+        outline[y * width + x] = 1;
+      }
+    }
+  }
+
+  const levels = Math.max(1, Math.min(8, Math.round(thickness)));
+  for (let level = 1; level < levels; level += 1) {
+    const next = new Uint8Array(outline);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const index = y * width + x;
+        if (mask[index] === 0 || outline[index] === 1) {
+          continue;
+        }
+        if (
+          (x > 0 && outline[index - 1] === 1) ||
+          (x < width - 1 && outline[index + 1] === 1) ||
+          (y > 0 && outline[index - width] === 1) ||
+          (y < height - 1 && outline[index + width] === 1)
+        ) {
+          next[index] = 1;
+        }
+      }
+    }
+    outline = next;
+  }
+  return outline;
 }
 
 function isOutlinePixel(
@@ -363,15 +443,20 @@ function getDraftDimensions(
 }
 
 function getInnerFitSize(
-  shape: SealShape,
+  _shape: SealShape,
   width: number,
   height: number,
+  widthMm: number,
+  heightMm: number,
+  outerMarginMm: number,
 ): { width: number; height: number } {
-  if (shape === "circle") {
-    const side = (Math.min(width, height) * 0.95) / Math.SQRT2;
-    return { width: side, height: side };
-  }
-  return { width: width * 0.9, height: height * 0.9 };
+  const margin = Math.max(0, outerMarginMm);
+  const horizontalMargin = (margin / Math.max(1, widthMm)) * width;
+  const verticalMargin = (margin / Math.max(1, heightMm)) * height;
+  return {
+    width: Math.max(1, width - horizontalMargin * 2),
+    height: Math.max(1, height - verticalMargin * 2),
+  };
 }
 
 function insideShape(
@@ -387,4 +472,35 @@ function insideShape(
   const radiusX = width / 2;
   const radiusY = height / 2;
   return ((x + 0.5 - radiusX) / radiusX) ** 2 + ((y + 0.5 - radiusY) / radiusY) ** 2 <= 1;
+}
+
+function parseBackgroundRules(
+  rules: readonly BackgroundRemovalRule[],
+): ParsedBackgroundRule[] {
+  const parsed: ParsedBackgroundRule[] = [];
+  for (const rule of rules) {
+    if (!rule.color) {
+      continue;
+    }
+    const color = parseHexColor(rule.color);
+    if (color) {
+      parsed.push({
+        color,
+        threshold: toleranceToDistance(rule.tolerance),
+      });
+    }
+  }
+  return parsed;
+}
+
+function isBackgroundColor(
+  color: RgbColor,
+  rules: readonly ParsedBackgroundRule[],
+): boolean {
+  for (const rule of rules) {
+    if (colorDistance(color, rule.color) <= rule.threshold) {
+      return true;
+    }
+  }
+  return false;
 }

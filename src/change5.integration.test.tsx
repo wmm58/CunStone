@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { createDefaultWorkImageState } from "./domain/types";
 import { FIXED_TEST_CODE } from "./features/auth/authService";
+import * as imageInput from "./features/editor/imageInput";
 import { setExportWorkIds } from "./features/export/exportSession";
 import { createWork } from "./features/works/workService";
 
@@ -15,6 +16,31 @@ const { downloadPdfMock } = vi.hoisted(() => ({
 vi.mock("./features/export/pdfExport", () => ({
   downloadA4Pdf: downloadPdfMock,
 }));
+
+vi.mock("./features/editor/imageInput", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("./features/editor/imageInput")>();
+  return {
+    ...actual,
+    prepareSourceDataUrl: vi.fn(),
+  };
+});
+
+const preparedSource = {
+  width: 2,
+  height: 2,
+  dataUrl: "data:image/png;base64,Y2hhbmdlNQ==",
+  raster: {
+    width: 2,
+    height: 2,
+    data: new Uint8ClampedArray([
+      255, 255, 255, 255,
+      0, 0, 0, 255,
+      0, 0, 0, 255,
+      255, 255, 255, 255,
+    ]),
+  },
+};
 
 async function loginWithUi() {
   const user = userEvent.setup();
@@ -29,6 +55,7 @@ function seedCompleted(
   name: string,
   widthMm = 30,
   heightMm = 30,
+  withSource = false,
 ) {
   createWork(
     {
@@ -36,6 +63,12 @@ function seedCompleted(
       status: "completed",
       imageState: {
         ...createDefaultWorkImageState(),
+        ...(withSource
+          ? {
+              sourceKind: "upload" as const,
+              sourceDataUrl: preparedSource.dataUrl,
+            }
+          : {}),
         shape: widthMm === heightMm ? "square" : "rectangle",
         widthMm,
         heightMm,
@@ -52,6 +85,7 @@ describe("Change 5 integration", () => {
     setExportWorkIds([]);
     downloadPdfMock.mockClear();
     downloadPdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70]));
+    vi.mocked(imageInput.prepareSourceDataUrl).mockResolvedValue(preparedSource);
   });
 
   it("adds P3 selected works to P4, auto-paginates and downloads through the PDF action", async () => {
@@ -94,7 +128,7 @@ describe("Change 5 integration", () => {
 
     const user = await loginWithUi();
     await screen.findByRole("heading", { name: "创作编辑" });
-    seedCompleted("completed-direct", "直接导出作品", 40, 40);
+    seedCompleted("completed-direct", "直接导出作品", 40, 40, true);
 
     act(() => {
       window.location.hash = "#/editor/completed-direct";

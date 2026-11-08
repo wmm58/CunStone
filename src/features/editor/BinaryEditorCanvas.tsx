@@ -1,12 +1,14 @@
-import { useEffect, useRef, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import type { EditTool, PixelPoint } from "./binaryEditing";
 import type { RgbaImage } from "./imageProcessing";
+import { useFittedCanvasSize } from "./useFittedCanvasSize";
 
 interface BinaryEditorCanvasProps {
   raster: RgbaImage | null;
   disabled: boolean;
   tool: EditTool;
+  toolSize: number;
   zoom: number;
   onStrokeStart: (point: PixelPoint) => void;
   onStrokeMove: (point: PixelPoint) => void;
@@ -17,6 +19,7 @@ export default function BinaryEditorCanvas({
   raster,
   disabled,
   tool,
+  toolSize,
   zoom,
   onStrokeStart,
   onStrokeMove,
@@ -24,6 +27,11 @@ export default function BinaryEditorCanvas({
 }: BinaryEditorCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
+  const [cursor, setCursor] = useState<PixelPoint | null>(null);
+  const { containerRef, frameStyle } = useFittedCanvasSize(
+    raster ? raster.width / raster.height : 1,
+    zoom / 100,
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -76,10 +84,13 @@ export default function BinaryEditorCanvas({
   }
 
   function handlePointerMove(event: PointerEvent<HTMLCanvasElement>) {
+    const point = toRasterPoint(event);
+    if (point) {
+      setCursor(point);
+    }
     if (!drawingRef.current) {
       return;
     }
-    const point = toRasterPoint(event);
     if (point) {
       onStrokeMove(point);
     }
@@ -95,33 +106,68 @@ export default function BinaryEditorCanvas({
   }
 
   return (
-    <section className="rounded-2xl border border-slate-300 bg-white">
+    <section className="flex h-full min-h-0 w-full flex-col rounded-2xl border border-slate-300 bg-white">
       <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
         <span className="text-xs text-slate-500">
           黑色 = 保留石头；白色 = 刻掉
         </span>
-        <span className="text-xs text-slate-500">{zoom}%</span>
+        <span className="text-xs text-slate-500">
+          {tool === "brush" ? "画笔" : "橡皮"} {toolSize}px · {zoom}%
+        </span>
       </div>
-      <div className="flex min-h-96 items-center justify-center overflow-auto bg-slate-100 p-4">
+      <div
+        className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-100 p-4"
+        ref={containerRef}
+      >
         {raster ? (
-          <canvas
-            aria-disabled={disabled}
-            aria-label="黑白稿编辑画布"
-            className={`shrink-0 border border-slate-300 bg-white shadow-sm ${
-              disabled ? "cursor-not-allowed" : tool === "brush" ? "cursor-crosshair" : "cursor-cell"
-            }`}
-            onPointerCancel={finishStroke}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={finishStroke}
-            ref={canvasRef}
-            style={{
-              height: `${(raster.height * zoom) / 100}px`,
-              imageRendering: "pixelated",
-              touchAction: "none",
-              width: `${(raster.width * zoom) / 100}px`,
-            }}
-          />
+          <div
+            className="relative shrink-0"
+            data-testid="binary-canvas-frame"
+            style={frameStyle}
+          >
+            <canvas
+              aria-disabled={disabled}
+              aria-label="黑白稿编辑画布"
+              className={`block h-full w-full border border-slate-300 bg-white shadow-sm ${
+                disabled ? "cursor-not-allowed" : tool === "brush" ? "cursor-crosshair" : "cursor-cell"
+              }`}
+              onPointerCancel={finishStroke}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={finishStroke}
+              onPointerLeave={() => setCursor(null)}
+              ref={canvasRef}
+              style={{
+                imageRendering: "pixelated",
+                touchAction: "none",
+              }}
+            />
+            {cursor && !disabled ? (
+              <svg
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                viewBox={`0 0 ${raster.width} ${raster.height}`}
+              >
+                <circle
+                  cx={cursor.x}
+                  cy={cursor.y}
+                  data-testid="binary-tool-cursor"
+                  fill="none"
+                  r={toolSize / 2}
+                  stroke="white"
+                  strokeWidth={Math.max(2, raster.width / 180)}
+                />
+                <circle
+                  cx={cursor.x}
+                  cy={cursor.y}
+                  fill="none"
+                  r={toolSize / 2}
+                  stroke="black"
+                  strokeWidth={Math.max(1, raster.width / 400)}
+                />
+              </svg>
+            ) : null}
+          </div>
         ) : (
           <p className="text-sm text-slate-500">请先生成黑白稿，再使用编辑工具</p>
         )}

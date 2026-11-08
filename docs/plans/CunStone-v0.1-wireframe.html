@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>CunStone v0.1 低保真线框图</title>
+  <title>CunStone Change 7 第四轮优化低保真线框图</title>
   <style>
     :root {
       --ink: #111111;
@@ -97,6 +97,30 @@
       border-top: 1px solid var(--line);
       color: var(--mid);
       font-size: 12px;
+    }
+
+    .version-target {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      align-items: center;
+      margin: 12px 0 16px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--ink);
+      background: var(--soft);
+    }
+
+    .version-target strong {
+      padding: 3px 7px;
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+
+    .version-target span {
+      color: #333333;
+      font-size: 11px;
     }
 
     .legend {
@@ -397,9 +421,19 @@
     }
 
     .select-count {
-      padding-left: 2px;
+      padding: 4px 6px;
+      border: 1px solid #bbbbbb;
+      background: var(--paper);
       color: var(--mid);
-      font-size: 9px;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .selection-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
     }
 
     .login-layout {
@@ -614,6 +648,155 @@
       margin-bottom: 10px;
     }
 
+    .brand-shell {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--ink);
+      background: var(--paper);
+    }
+
+    .brand-lockup {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      width: 31px;
+      height: 31px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .brand-mark svg {
+      display: block;
+      width: 23px;
+      height: 23px;
+    }
+
+    .brand-wordmark {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+      letter-spacing: 0.14em;
+    }
+
+    .brand-divider {
+      width: 1px;
+      height: 23px;
+      background: #999999;
+    }
+
+    .brand-page-name {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .brand-note {
+      margin-left: auto;
+      color: var(--mid);
+      font-size: 8px;
+    }
+
+    .tool-module-head {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      margin-bottom: 7px;
+    }
+
+    .module-icon {
+      display: inline-flex;
+      width: 23px;
+      height: 23px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--ink);
+      background: var(--soft);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .tool-module-head h3 {
+      margin: 0;
+      font-size: 10px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .mode-switch.sidebar-mode-switch {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      margin: 0 0 2px;
+      background: var(--paper);
+    }
+
+    .name-field input {
+      min-width: 0;
+      flex: 1;
+      padding: 5px 7px;
+      border: 1px solid #999999;
+      background: var(--paper);
+      font: inherit;
+      font-size: 10px;
+    }
+
+    .canvas-ratio-frame {
+      display: flex;
+      width: min(100%, 540px);
+      aspect-ratio: 1;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed #555555;
+      background: rgba(255, 255, 255, 0.94);
+    }
+
+    .dialog-examples {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .dialog-example {
+      padding: 10px;
+      border: 1px dashed #777777;
+      background: var(--paper);
+    }
+
+    .dialog-example h4 {
+      margin-bottom: 5px;
+      font-size: 10px;
+    }
+
+    .dialog-example p {
+      margin: 0 0 8px;
+      color: var(--mid);
+      font-size: 8px;
+      line-height: 1.55;
+    }
+
+    .dialog-example-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .dialog-example-actions span {
+      padding: 3px 6px;
+      border: 1px solid #999999;
+      font-size: 8px;
+    }
+
     .name-field {
       display: flex;
       min-width: 250px;
@@ -642,6 +825,46 @@
       gap: 6px;
     }
 
+    .mode-switch {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      border: 1px dashed #999999;
+      background: var(--soft);
+    }
+
+    .mode-switch > strong {
+      font-size: 10px;
+    }
+
+    .mode-option {
+      padding: 5px 9px;
+      border: 1px solid #999999;
+      background: var(--paper);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .mode-option.active {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .mode-visibility {
+      margin-left: auto;
+      color: var(--mid);
+      font-size: 9px;
+      text-align: right;
+    }
+
+    .mode-visibility strong {
+      color: var(--ink);
+    }
+
     .editor-layout {
       display: grid;
       grid-template-columns: 235px minmax(0, 1fr);
@@ -653,6 +876,25 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+    }
+
+    .change7-sidebar {
+      max-height: 620px;
+      padding-right: 5px;
+      overflow-y: auto;
+      border-right: 1px dashed #aaaaaa;
+    }
+
+    .sidebar-pin-note {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: 5px 7px;
+      border: 1px dashed #777777;
+      background: #eeeeee;
+      color: var(--mid);
+      font-size: 9px;
+      text-align: center;
     }
 
     .tool-block {
@@ -682,12 +924,108 @@
       font-size: 9px;
     }
 
+    .color-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .color-row {
+      display: grid;
+      grid-template-columns: 14px minmax(0, 1fr) 20px;
+      gap: 6px;
+      align-items: center;
+      padding: 6px;
+      border: 1px solid #aaaaaa;
+      background: var(--paper);
+    }
+
+    .color-row.active {
+      border: 2px solid var(--ink);
+      background: #f0f0f0;
+    }
+
+    .color-swatch {
+      width: 13px;
+      height: 13px;
+      border: 1px solid var(--ink);
+      background: var(--paper);
+    }
+
+    .color-swatch.filled {
+      background: #888888;
+    }
+
+    .color-info {
+      min-width: 0;
+    }
+
+    .color-info strong {
+      display: block;
+      font-size: 9px;
+    }
+
+    .color-info span {
+      color: var(--mid);
+      font-size: 8px;
+    }
+
+    .tolerance-line {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .tolerance-line::before {
+      content: "";
+      width: 58px;
+      height: 3px;
+      border: 1px solid #777777;
+      background: linear-gradient(90deg, #222 0 42%, #fff 42% 100%);
+    }
+
+    .color-remove {
+      display: inline-flex;
+      width: 18px;
+      height: 18px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--ink);
+      font-size: 12px;
+    }
+
+    .add-color {
+      margin-top: 7px;
+      padding: 5px 7px;
+      border: 1px dashed #777777;
+      color: var(--mid);
+      font-size: 9px;
+      text-align: center;
+    }
+
     .editor-main {
       display: flex;
       min-width: 0;
       flex-direction: column;
       border: 1px dashed #999999;
       background: #fafafa;
+    }
+
+    .editor-main.fixed-canvas-frame {
+      position: sticky;
+      top: 12px;
+      align-self: start;
+    }
+
+    .canvas-fixed-note {
+      padding: 6px 8px;
+      border-bottom: 1px dashed #aaaaaa;
+      background: #eeeeee;
+      color: var(--mid);
+      font-size: 9px;
+      text-align: center;
     }
 
     .editor-toolbar {
@@ -744,6 +1082,29 @@
       width: 88px;
       height: 88px;
       border: 2px solid var(--ink);
+    }
+
+    .upload-target {
+      display: flex;
+      width: 300px;
+      min-height: 170px;
+      padding: 20px;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 7px;
+      border: 2px dashed #555555;
+      background: rgba(255, 255, 255, 0.94);
+      text-align: center;
+    }
+
+    .upload-target strong {
+      font-size: 13px;
+    }
+
+    .upload-target span {
+      color: var(--mid);
+      font-size: 9px;
     }
 
     .click-marker {
@@ -817,6 +1178,66 @@
     .editor-boundary {
       margin-top: 8px;
       color: var(--mid);
+      font-size: 9px;
+    }
+
+    .mode-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mode-detail-card {
+      padding: 9px;
+      border: 1px dashed #999999;
+      background: var(--paper);
+    }
+
+    .mode-detail-card > strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 10px;
+    }
+
+    .mode-detail-card p {
+      margin: 6px 0 0;
+      color: var(--mid);
+      font-size: 9px;
+    }
+
+    .mode-detail-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .mode-detail-tools span {
+      padding: 3px 5px;
+      border: 1px solid #999999;
+      font-size: 8px;
+      white-space: nowrap;
+    }
+
+    .change7-rule-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .change7-rule-strip div {
+      padding: 7px;
+      border: 1px dashed #999999;
+      background: #fafafa;
+      color: var(--mid);
+      font-size: 8px;
+    }
+
+    .change7-rule-strip strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--ink);
       font-size: 9px;
     }
 
@@ -1124,6 +1545,14 @@
       .export-layout {
         grid-template-columns: 180px minmax(0, 1fr);
       }
+
+      .mode-detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .change7-rule-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
 
     @media print {
@@ -1147,14 +1576,21 @@
 <body>
   <main class="sheet">
     <header>
-      <div class="eyebrow">CunStone / v0.1 / Low-fidelity wireframe</div>
+      <div class="eyebrow">CunStone / Change 7 fourth round / Low-fidelity wireframe</div>
       <h1>篆刻印稿转印工具 · 页面结构与用户路径</h1>
+      <div class="version-target" aria-label="线框图版本与目标状态">
+        <strong>目标状态</strong>
+        <span>基于 Change 7 第三轮实现</span>
+        <span>目标 Change 7 第四轮优化（v0-1-7）</span>
+        <span>更新：2026-11-08 · 未归档</span>
+      </div>
       <p class="lede">
-        本线框图只用于确认页面结构、内容分区和用户路径，不代表最终视觉样式、交互细节或前端实现。
+        本线框图只用于确认 Change 7 的目标页面结构、内容分区和用户路径，不代表最终视觉样式、交互细节或前端实现。
       </p>
       <div class="meta">
-        <span>依据：CunStone v0.1 软件发展蓝图草案及线框评审调整</span>
+        <span>依据：CunStone v0.1 蓝图及 Change 7 第四轮需求</span>
         <span>日期：2026-10-26</span>
+        <span>目标版本：v0-1-7</span>
         <span>4 个核心页面</span>
         <span>电脑浏览器</span>
       </div>
@@ -1178,7 +1614,7 @@
           <span class="flow-arrow">→</span>
           <div class="flow-step">P2 创作编辑<small>登录后直接进入</small></div>
           <span class="flow-arrow">→</span>
-          <div class="flow-step">编辑页操作<small>草稿 / 保存（已完成） / A4 导出</small></div>
+          <div class="flow-step">编辑页操作<small>草稿 / 保存 / A4 导出 / 清除</small></div>
         </div>
         <div class="flow-line">
           <div class="flow-step">P2 保存后进入 P3<small>作品列表：全部 / 已完成 / 草稿</small></div>
@@ -1190,8 +1626,10 @@
           <div class="flow-step">下载黑白 PDF<small>流程结束</small></div>
         </div>
         <div class="flow-rules">
+          <div class="flow-rule"><strong>统一品牌</strong>四页使用内嵌 SVG Logo、CUNSTONE 和页面名称，不显示 P 编号角标。</div>
           <div class="flow-rule"><strong>登录直达编辑</strong>P1 登录成功后直接进入 P2。</div>
-          <div class="flow-rule"><strong>P3 作品管理</strong>已完成页支持“一件全选”、删除，以及红印/黑白预览弹窗。</div>
+          <div class="flow-rule"><strong>P2 直接导出</strong>点击 A4 导出先自动保存为已完成，再进入 P4。</div>
+          <div class="flow-rule"><strong>P3 作品管理</strong>已完成页支持“一键全选”、删除，以及红印/黑白预览弹窗。</div>
           <div class="flow-rule"><strong>P4 添加作品</strong>通过弹窗多选已完成作品，确定后显示总添加数量。</div>
           <div class="flow-rule"><strong>手动排版</strong>P4 提供拖动、旋转、间距和翻页操作。</div>
         </div>
@@ -1211,13 +1649,28 @@
             <div class="browser-route">cunstone.app / login</div>
           </div>
           <div class="screen-title">
-            <strong id="p1-title">P1 · 登录 / 注册页</strong>
+            <strong id="p1-title">登录 / 注册</strong>
             <span>入口：未登录<br>出口：P2 创作编辑页</span>
           </div>
           <div class="screen-body">
+            <div class="brand-shell" aria-label="页面品牌头部">
+              <div class="brand-lockup">
+                <span class="brand-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M16.5 8.2C15.4 7.2 13.9 6.8 12.3 7.1C9.8 7.5 8 9.7 8.3 12.2C8.6 14.7 10.8 16.5 13.3 16.2C14.7 16 15.8 15.3 16.6 14.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <path d="M5 19.5H9M15 4.5H19" stroke="currentColor" stroke-width="1.2"/>
+                  </svg>
+                </span>
+                <strong class="brand-wordmark">CUNSTONE</strong>
+              </div>
+              <span class="brand-divider" aria-hidden="true"></span>
+              <span class="brand-page-name">登录 / 注册</span>
+              <span class="brand-note">内嵌 SVG Logo · 页面名称替代 P 编号</span>
+            </div>
             <div class="login-layout">
               <div class="login-context">
-                <div class="brand-placeholder">工具名称 / 标识<br>占位区</div>
+                <div class="brand-placeholder">方形印面 + 负形刻痕<br>精致几何 Logo 占位</div>
                 <h3>产品说明占位</h3>
                 <p class="muted">上传已有画面，制作可打印、可转印的黑白印稿。</p>
                 <p class="note">未登录用户不能访问作品、编辑或导出页面。</p>
@@ -1243,21 +1696,34 @@
             <div class="browser-route">cunstone.app / works</div>
           </div>
           <div class="screen-title">
-            <strong id="p3-title">P3 · 作品列表页</strong>
+            <strong id="p3-title">作品列表</strong>
             <span>入口：P2 返回作品列表<br>出口：P2 继续编辑 / P4 导出</span>
           </div>
           <div class="screen-body">
+            <div class="brand-shell" aria-label="页面品牌头部">
+              <div class="brand-lockup">
+                <span class="brand-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M16.5 8.2C15.4 7.2 13.9 6.8 12.3 7.1C9.8 7.5 8 9.7 8.3 12.2C8.6 14.7 10.8 16.5 13.3 16.2C14.7 16 15.8 15.3 16.6 14.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <path d="M5 19.5H9M15 4.5H19" stroke="currentColor" stroke-width="1.2"/>
+                  </svg>
+                </span>
+                <strong class="brand-wordmark">CUNSTONE</strong>
+              </div>
+              <span class="brand-divider" aria-hidden="true"></span>
+              <span class="brand-page-name">作品列表</span>
+              <span class="brand-note">统一品牌头部</span>
+            </div>
             <div class="works-toolbar">
               <div class="chip-row">
                 <span class="chip">全部作品</span>
                 <span class="chip active">已完成</span>
                 <span class="chip">草稿</span>
               </div>
-              <div class="chip-row">
-                <div class="select-stack">
-                  <span class="bulk-select"><span class="checkbox">✓</span>一件全选</span>
-                  <span class="select-count">已选 2 项</span>
-                </div>
+              <div class="selection-row" aria-label="已完成作品选择与操作">
+                <span class="select-count">已选 2 项</span>
+                <span class="bulk-select"><span class="checkbox">✓</span>一键全选</span>
                 <span class="btn">删除</span>
                 <span class="btn">A4 导出</span>
                 <span class="btn primary">新建作品</span>
@@ -1308,7 +1774,7 @@
 
             <div class="works-foot">
               <span>当前为“已完成”筛选；点击“预览”打开弹窗。</span>
-              <span>“一件全选”下方显示已选数量，支持删除已选作品。</span>
+              <span>“已选数量”位于“一键全选”前面；草稿筛选同样支持多选删除，但不显示 A4 导出。</span>
             </div>
           </div>
         </article>
@@ -1319,111 +1785,201 @@
             <div class="browser-route">cunstone.app / editor</div>
           </div>
           <div class="screen-title">
-            <strong id="p2-title">P2 · 创作编辑页</strong>
+            <strong id="p2-title">创作编辑</strong>
             <span>入口：P1 登录直达 / P3 继续编辑<br>出口：P3 或 P4</span>
           </div>
           <div class="screen-body editor-body">
+            <div class="brand-shell" aria-label="页面品牌头部">
+              <div class="brand-lockup">
+                <span class="brand-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M16.5 8.2C15.4 7.2 13.9 6.8 12.3 7.1C9.8 7.5 8 9.7 8.3 12.2C8.6 14.7 10.8 16.5 13.3 16.2C14.7 16 15.8 15.3 16.6 14.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <path d="M5 19.5H9M15 4.5H19" stroke="currentColor" stroke-width="1.2"/>
+                  </svg>
+                </span>
+                <strong class="brand-wordmark">CUNSTONE</strong>
+              </div>
+              <span class="brand-divider" aria-hidden="true"></span>
+              <span class="brand-page-name">创作编辑</span>
+              <span class="brand-note">Logo + 字标 + 页面名称</span>
+            </div>
             <div class="editor-header">
               <div class="name-field">
                 <span>作品名称</span>
-                <strong>未命名作品</strong>
-                <span>点击名称可编辑</span>
+                <input aria-label="作品名称" value="未命名作品" readonly />
               </div>
               <div class="editor-actions">
                 <span class="btn">作品列表</span>
                 <span class="btn">草稿</span>
-                <span class="btn primary">保存（已完成）</span>
+                <span class="btn primary">保存</span>
                 <span class="btn">A4 导出</span>
+                <span class="btn">清除</span>
               </div>
             </div>
+
             <div class="editor-layout">
-              <aside class="editor-sidebar" aria-label="编辑工具">
+              <aside class="editor-sidebar change7-sidebar" aria-label="图片编辑工具">
+                <div class="mode-switch sidebar-mode-switch" aria-label="P2 工具模式切换">
+                  <span class="mode-option active">图片编辑</span>
+                  <span class="mode-option">黑白稿编辑</span>
+                </div>
+                <div class="sidebar-pin-note">模式在左侧且始终可双向切换；工具区独立滚动</div>
                 <div class="tool-block">
-                  <h3>01 外形与实际尺寸</h3>
+                  <div class="tool-module-head">
+                    <span class="module-icon" aria-hidden="true">▧</span>
+                    <h3>上传图片</h3>
+                  </div>
                   <div class="chip-row">
-                    <span class="chip active">正方形</span>
-                    <span class="chip">长方形</span>
-                    <span class="chip">圆形</span>
-                    <span class="chip">自定义</span>
+                    <span class="chip active">上传图片</span>
                   </div>
-                  <div class="mini-fields">
-                    <div class="mini-field">宽 mm</div>
-                    <div class="mini-field">高 mm</div>
-                  </div>
-                  <p class="note" style="margin: 6px 0 0;">系统推荐，可手动修改</p>
+                  <p class="note" style="margin: 6px 0 0;">已移除手绘入口；仅接受完整图片。</p>
                 </div>
 
                 <div class="tool-block">
-                  <h3>02 输入完整画面</h3>
-                  <div class="chip-row">
-                    <span class="chip">上传图片</span>
-                    <span class="chip">手绘画布</span>
+                  <div class="tool-module-head">
+                    <span class="module-icon" aria-hidden="true">◫</span>
+                    <h3>纯色背景去除 · 多颜色</h3>
                   </div>
-                  <p class="note" style="margin: 6px 0 0;">不支持在系统内拼排多个元素</p>
+                  <p class="note" style="margin: 0;">点击背景区域指定要移除的颜色；再次点击颜色行可重新取样。</p>
+                  <div class="color-rows">
+                    <div class="color-row active">
+                      <span class="color-swatch filled"></span>
+                      <div class="color-info">
+                        <strong>颜色 1 · #FFFFFF · 当前采样</strong>
+                        <div class="tolerance-line"><span>容差 20</span></div>
+                      </div>
+                      <span class="color-remove">−</span>
+                    </div>
+                    <div class="color-row">
+                      <span class="color-swatch"></span>
+                      <div class="color-info">
+                        <strong>颜色 2 · 待点选</strong>
+                        <div class="tolerance-line"><span>容差 35</span></div>
+                      </div>
+                      <span class="color-remove">−</span>
+                    </div>
+                  </div>
+                  <div class="add-color">添加待选颜色</div>
                 </div>
 
                 <div class="tool-block">
-                  <h3>03 纯色背景去除</h3>
-                  <p class="note" style="margin: 0;">在画布中点击背景区域</p>
-                  <div class="mini-field" style="margin-top: 6px;">已选背景色：待点选</div>
-                  <p class="note" style="margin: 6px 0 0;">仅支持纯色背景，不处理复杂照片</p>
+                  <div class="tool-module-head">
+                    <span class="module-icon" aria-hidden="true">⌗</span>
+                    <h3>裁剪</h3>
+                  </div>
+                  <div class="chip-row">
+                    <span class="chip active">裁剪</span>
+                    <span class="chip">透视裁剪</span>
+                  </div>
+                  <p class="note" style="margin: 6px 0 0;">拖拽框选裁剪；透视裁剪依次点击四个角；应用后保留背景规则。</p>
                 </div>
 
                 <div class="tool-block">
-                  <h3>04 效果与适配</h3>
-                  <div class="chip-row">
-                    <span class="chip active">实心剪影</span>
-                    <span class="chip">轮廓线稿</span>
+                  <div class="tool-module-head">
+                    <span class="module-icon" aria-hidden="true">◇</span>
+                    <h3>橡皮</h3>
                   </div>
-                  <p class="note" style="margin: 6px 0 0;">自动缩放、旋转、锐化、矫形</p>
+                  <div class="chip-row">
+                    <span class="chip">使用橡皮</span>
+                  </div>
+                  <div class="tolerance-line" style="margin-top: 8px;"><span>橡皮大小 24 px · 抬笔后保持橡皮，可连续多笔</span></div>
+                  <p class="note" style="margin: 6px 0 0;">橡皮和裁剪的工作图不逐笔自动保存，点击草稿、保存或 A4 导出时写入。</p>
                 </div>
 
-                <div class="tool-block">
-                  <h3>05 黑白稿编辑</h3>
-                  <div class="chip-row">
-                    <span class="chip">画笔</span>
-                    <span class="chip">橡皮</span>
-                    <span class="chip">撤销</span>
-                    <span class="chip">重做</span>
-                    <span class="chip">放大</span>
-                    <span class="chip">线宽</span>
+                <div class="mode-detail-card">
+                  <strong>切换“黑白稿编辑”后，左侧显示</strong>
+                  <div class="mode-detail-tools">
+                    <span>图标 · 外形与尺寸</span>
+                    <span>图标 · 效果与适配 · 0–20 mm 外边距</span>
+                    <span>图标 · 手绘</span>
+                    <span>图标 · 阴 / 阳刻与边框 · 0–20 mm 边框外边距</span>
                   </div>
-                </div>
-
-                <div class="tool-block">
-                  <h3>06 阴 / 阳刻与边框</h3>
-                  <div class="chip-row">
-                    <span class="chip active">阳刻</span>
-                    <span class="chip">阴刻</span>
-                    <span class="chip">正常</span>
-                    <span class="chip">左右镜像</span>
-                  </div>
-                  <div class="mini-field" style="margin-top: 6px;">边框：单线 / 粗线 / 双线 / 残破边 / 无</div>
+                  <p>切换只替换工具区，不清空当前输入或黑白编辑状态；没有图片时显示空状态。</p>
                 </div>
               </aside>
 
-              <section class="editor-main" aria-label="画布">
-                <div class="editor-toolbar">
-                  <span class="tool-chip">撤销</span>
-                  <span class="tool-chip">重做</span>
-                  <span class="tool-chip">放大</span>
-                  <span class="tool-chip">画笔</span>
-                  <span class="tool-chip">橡皮</span>
-                  <span class="tool-chip">线宽</span>
-                </div>
+              <section class="editor-main fixed-canvas-frame" aria-label="画布">
+                <div class="canvas-fixed-note">右侧画布铺满剩余空间 · 默认 1:1 等比显示 · 页面不滚动</div>
                 <div class="canvas-area">
-                  <div class="canvas-seal">
-                    <span class="click-marker">点击背景去底</span>
+                  <div class="canvas-ratio-frame">
+                    <div class="upload-target">
+                      <strong>点击画布中心上传图片</strong>
+                      <span>1:1 画布 · PNG / JPEG / WebP · 单文件不超过 10 MB</span>
+                    </div>
                   </div>
                 </div>
                 <div class="canvas-foot">
-                  <span>黑白约定：黑色 = 保留石头；白色 = 刻掉</span>
-                  <span>仅提供 1:1 视觉预览，不显示自动可刻性检查</span>
-                  <span>自动保存状态：已保存 10:24</span>
+                  <span>保存前校验：作品为空时阻止保存并提示</span>
+                  <span>清除：清空图片、去底、黑白编辑、历史与颜色列表</span>
+                  <span>A4 导出：先自动保存为已完成，再进入 P4</span>
                 </div>
               </section>
             </div>
-            <p class="editor-boundary">红印与黑白稿预览已移至 P3 作品列表的预览弹窗；A4 导出页只能添加已完成作品。</p>
+
+            <div class="mode-detail-grid" aria-label="两种模式的工具结构">
+              <div class="mode-detail-card">
+                <strong>图片编辑（默认）</strong>
+                <div class="mode-detail-tools">
+                  <span>图标 · 上传图片</span>
+                  <span>图标 · 多颜色背景去除</span>
+                  <span>图标 · 裁剪 / 透视裁剪</span>
+                  <span>图标 · 图片橡皮 1–80 px</span>
+                </div>
+                <p>取色、裁剪、透视裁剪和橡皮为互斥画布工具；橡皮可连续多笔；模式入口位于左侧顶部。</p>
+              </div>
+              <div class="mode-detail-card">
+                <strong>黑白稿编辑</strong>
+                <div class="mode-detail-tools">
+                  <span>图标 · 正方形 / 长方形 / 圆形</span>
+                  <span>图标 · 实心剪影 / 轮廓线稿 + 轮廓粗细 + 锐化 + 0–20 mm 外边距</span>
+                  <span>图标 · 手绘：画笔/橡皮独立大小 + 光标</span>
+                  <span>图标 · 阳刻 / 阴刻 / 镜像 / 边框粗细 / 0–20 mm 边框外边距</span>
+                </div>
+                <div class="tolerance-line" style="margin: 7px 0;"><span>轮廓 4 / 8 · 锐化 3 / 8 · 外边距 8 mm · 边框外边距 3.5 mm</span></div>
+                <p>无数字序号；手绘按当前工具显示画笔或橡皮大小滑杆。</p>
+              </div>
+            </div>
+
+            <div class="change7-rule-strip">
+              <div><strong>品牌</strong>P1–P4 统一 Logo、字标与页面名称，删除 P 编号。</div>
+              <div><strong>画布</strong>右侧铺满、默认 1:1；模式入口移至左侧工具区且始终可双向切换。</div>
+              <div><strong>保存</strong>成功后弹窗说明结果；不再常驻草稿、未保存和安全说明。</div>
+              <div><strong>图片工具</strong>裁剪、透视裁剪、连续图片橡皮；保留背景规则，工作图延后保存。</div>
+              <div><strong>手绘与边框</strong>画笔/橡皮独立大小；效果与边框外边距均以 mm 显示。</div>
+            </div>
+
+            <div class="dialog-examples" aria-label="Change 7 第四轮关键弹窗">
+              <div class="dialog-example">
+                <h4>草稿已保存</h4>
+                <p>作品已保存到当前浏览器。更换浏览器、清除站点数据或更换设备后可能无法恢复。</p>
+                <div class="dialog-example-actions">
+                  <span>知道了</span>
+                </div>
+              </div>
+              <div class="dialog-example">
+                <h4>当前修改尚未保存</h4>
+                <p>离开后，本次未保存的修改会丢失。</p>
+                <div class="dialog-example-actions">
+                  <span>继续编辑</span>
+                  <span>保存草稿并继续</span>
+                  <span>直接离开</span>
+                </div>
+              </div>
+              <div class="dialog-example">
+                <h4>替换当前作品？</h4>
+                <p>当前画布已有内容，替换后会使用新图片重新开始。</p>
+                <div class="dialog-example-actions">
+                  <span>取消</span>
+                  <span>保存草稿并替换</span>
+                  <span>直接替换</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="editor-boundary">
+              版本目标：基于 Change 7 第三轮实现的第四轮优化（v0-1-7，未归档）。红印与黑白稿预览仍只在 P3 预览弹窗展示。
+            </p>
           </div>
         </article>
 
@@ -1433,10 +1989,25 @@
             <div class="browser-route">cunstone.app / export/a4</div>
           </div>
           <div class="screen-title">
-            <strong id="p4-title">P4 · A4 导出页</strong>
+            <strong id="p4-title">A4 导出</strong>
             <span>入口：P2 A4 导出 / P3 已完成作品<br>出口：下载 PDF</span>
           </div>
           <div class="screen-body export-body">
+            <div class="brand-shell" aria-label="页面品牌头部">
+              <div class="brand-lockup">
+                <span class="brand-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M16.5 8.2C15.4 7.2 13.9 6.8 12.3 7.1C9.8 7.5 8 9.7 8.3 12.2C8.6 14.7 10.8 16.5 13.3 16.2C14.7 16 15.8 15.3 16.6 14.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <path d="M5 19.5H9M15 4.5H19" stroke="currentColor" stroke-width="1.2"/>
+                  </svg>
+                </span>
+                <strong class="brand-wordmark">CUNSTONE</strong>
+              </div>
+              <span class="brand-divider" aria-hidden="true"></span>
+              <span class="brand-page-name">A4 导出</span>
+              <span class="brand-note">统一品牌头部</span>
+            </div>
             <div class="export-layout">
               <aside class="export-list" aria-label="已添加作品列表">
                 <h3>已添加作品列表</h3>
@@ -1454,6 +2025,7 @@
                   <span class="layout-tool">旋转</span>
                   <span class="layout-tool">水平间距</span>
                   <span class="layout-tool">垂直间距</span>
+                  <span class="btn primary" style="margin-left: auto;">下载 PDF</span>
                 </div>
                 <div class="a4-sheet">
                   <div class="a4-seal square selected">
@@ -1478,11 +2050,6 @@
                   <span>第 1 / 1 页</span>
                   <span class="btn">下一页</span>
                 </div>
-                <div class="export-footer">
-                  <span class="note">拖动印章调整位置；使用工具栏旋转或调整间距。PDF 仅黑白稿，即时生成不保存历史。</span>
-                  <span class="btn primary">下载 PDF</span>
-                </div>
-
                 <div class="add-works-backdrop">
                   <div class="add-works-modal" role="dialog" aria-label="添加已完成作品弹窗">
                     <div class="add-works-head">
@@ -1521,7 +2088,7 @@
     </section>
 
     <p class="footer-note">
-      本文件为 CunStone v0.1 总览式低保真线框图，只表达页面结构和用户路径；不包含真实交互、业务逻辑、视觉设计或正式前端代码。
+      本文件为 CunStone 基于 Change 7 第三轮实现、目标 Change 7 第四轮优化（v0-1-7，未归档）的总览式低保真线框图，只表达页面结构和用户路径；不包含真实交互、业务逻辑、正式视觉稿或前端代码。
     </p>
   </main>
 </body>

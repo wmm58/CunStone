@@ -25,11 +25,11 @@ function props(overrides: Partial<React.ComponentProps<typeof BinaryEditorPanel>
 }
 
 describe("BinaryEditorPanel", () => {
-  it("renders 05 and 06 controls with current selection", () => {
+  it("renders black-white and seal controls with current selection", () => {
     render(<BinaryEditorPanel {...props()} />);
 
-    expect(screen.getByRole("heading", { name: "05 黑白稿编辑" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "06 阴 / 阳刻与边框" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "手绘" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "阴 / 阳刻与边框" })).toBeVisible();
     expect(screen.getByRole("button", { name: "画笔" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -51,7 +51,7 @@ describe("BinaryEditorPanel", () => {
   it("changes tools, line width, carving, orientation and border", async () => {
     const user = userEvent.setup();
     const callbacks = props();
-    render(<BinaryEditorPanel {...callbacks} />);
+    const { rerender } = render(<BinaryEditorPanel {...callbacks} />);
 
     await user.click(screen.getByRole("button", { name: "橡皮" }));
     expect(callbacks.onToolChange).toHaveBeenCalledWith("eraser");
@@ -68,11 +68,88 @@ describe("BinaryEditorPanel", () => {
       expect.objectContaining({ borderStyle: "double" }),
     );
 
-    const width = screen.getByLabelText("画笔线宽");
+    const borderThickness = screen.getByLabelText("边框粗细");
+    expect(borderThickness).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "单线" }));
+    expect(callbacks.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ borderStyle: "single" }),
+    );
+
+    const width = screen.getByLabelText("画笔大小");
     fireEvent.change(width, { target: { value: "18" } });
     expect(callbacks.onChange).toHaveBeenCalledWith(
       expect.objectContaining({ brushSize: 18 }),
     );
+  });
+
+  it("shows separate brush and eraser size sliders", async () => {
+    const user = userEvent.setup();
+    const callbacks = props();
+    const { rerender } = render(<BinaryEditorPanel {...callbacks} />);
+
+    expect(screen.getByLabelText("画笔大小")).toHaveValue("6");
+    expect(screen.queryByLabelText("橡皮大小")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "橡皮" }));
+    expect(callbacks.onToolChange).toHaveBeenCalledWith("eraser");
+    rerender(<BinaryEditorPanel {...callbacks} tool="eraser" />);
+    expect(screen.queryByLabelText("画笔大小")).not.toBeInTheDocument();
+    const eraser = screen.getByLabelText("橡皮大小");
+    expect(eraser).toHaveValue("6");
+    fireEvent.change(eraser, { target: { value: "18" } });
+    expect(callbacks.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ eraserSize: 18 }),
+    );
+  });
+
+  it("offers three new border choices, thickness and millimetre margin", async () => {
+    const user = userEvent.setup();
+    const callbacks = props({
+      binaryState: {
+        ...createDefaultWorkBinaryState(),
+        borderStyle: "single",
+      },
+    });
+    render(<BinaryEditorPanel {...callbacks} />);
+
+    for (const name of ["无边框", "单线", "双线"]) {
+      expect(screen.getByRole("button", { name })).toBeVisible();
+    }
+    expect(screen.queryByRole("button", { name: "粗线" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "残破边" })).not.toBeInTheDocument();
+
+    const thickness = screen.getByLabelText("边框粗细");
+    expect(thickness).toHaveValue("2");
+    fireEvent.change(thickness, { target: { value: "8" } });
+    expect(callbacks.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ borderThickness: 8 }),
+    );
+
+    const margin = screen.getByLabelText("边框外边距");
+    expect(margin).toHaveValue("0");
+    expect(margin).toHaveAttribute("step", "0.1");
+    expect(screen.getByText("外边距 0 mm")).toBeVisible();
+    fireEvent.change(margin, { target: { value: "5.7" } });
+    expect(callbacks.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ borderMarginMm: 5.7 }),
+    );
+  });
+
+  it("shows a read-only marker for a legacy broken border", () => {
+    render(
+      <BinaryEditorPanel
+        {...props({
+          binaryState: {
+            ...createDefaultWorkBinaryState(),
+            borderStyle: "broken",
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("历史残破边（只读兼容）")).toBeVisible();
+    expect(screen.getByLabelText("边框粗细")).toBeDisabled();
+    expect(screen.getByLabelText("边框外边距")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "残破边" })).not.toBeInTheDocument();
   });
 
   it("wires undo, redo and zoom actions", async () => {
@@ -98,8 +175,9 @@ describe("BinaryEditorPanel", () => {
 
     expect(screen.getByRole("button", { name: "画笔" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "撤销" })).toBeDisabled();
-    expect(screen.getByLabelText("画笔线宽")).toBeDisabled();
+    expect(screen.getByLabelText("画笔大小")).toBeDisabled();
     expect(screen.getByRole("button", { name: "单线" })).toBeDisabled();
+    expect(screen.getByLabelText("边框粗细")).toBeDisabled();
     expect(screen.getByText("请先生成黑白稿，再使用编辑工具")).toBeVisible();
   });
 });

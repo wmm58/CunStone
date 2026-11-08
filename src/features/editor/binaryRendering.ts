@@ -2,35 +2,16 @@ import type {
   BorderStyle,
   SealShape,
   WorkBinaryEditState,
-  WorkImageState,
 } from "../../domain/types";
+import {
+  MAX_BORDER_THICKNESS,
+  MIN_BORDER_THICKNESS,
+} from "../../domain/types";
+import { createGenerationSignature } from "../../lib/binary/generationSignature";
 import { applyManualOverlay } from "./binaryEditing";
 import type { RgbaImage } from "./imageProcessing";
 
-export function createGenerationSignature(state: WorkImageState): string {
-  const source = [
-    state.sourceDataUrl ?? "",
-    state.shape,
-    state.widthMm,
-    state.heightMm,
-    state.backgroundColor ?? "",
-    state.tolerance,
-    state.effectMode,
-    state.processingVersion,
-  ].join("\u001f");
-
-  let first = 0x811c9dc5;
-  let second = 0x9e3779b9;
-  for (let index = 0; index < source.length; index += 1) {
-    const code = source.charCodeAt(index);
-    first = Math.imul(first ^ code, 0x01000193);
-    second = Math.imul(second ^ code, 0x85ebca6b);
-  }
-
-  return `${(first >>> 0).toString(16).padStart(8, "0")}${(second >>> 0)
-    .toString(16)
-    .padStart(8, "0")}`;
-}
+export { createGenerationSignature };
 
 export function invertBinary(image: RgbaImage): RgbaImage {
   const data = new Uint8ClampedArray(image.data);
@@ -57,6 +38,10 @@ export function applyBorder(
   image: RgbaImage,
   style: BorderStyle,
   shape: SealShape,
+  borderThickness = 2,
+  borderMarginMm = 0,
+  widthMm = 20,
+  heightMm = 20,
 ): RgbaImage {
   if (style === "none") {
     return { ...image, data: new Uint8ClampedArray(image.data) };
@@ -64,24 +49,61 @@ export function applyBorder(
 
   const result = { ...image, data: new Uint8ClampedArray(image.data) };
   const minDimension = Math.min(image.width, image.height);
-  const outerInset = Math.max(1, Math.round(minDimension * 0.04));
-  const thinThickness = Math.max(1, Math.round(minDimension * 0.0125));
-  const thickThickness = Math.max(2, Math.round(minDimension * 0.04));
-  const gap = Math.max(1, Math.round(minDimension * 0.015));
+  const insetX = Math.max(
+    0,
+    Math.round((borderMarginMm / Math.max(1, widthMm)) * image.width),
+  );
+  const insetY = Math.max(
+    0,
+    Math.round((borderMarginMm / Math.max(1, heightMm)) * image.height),
+  );
+  const circleInset = Math.max(
+    0,
+    Math.round((borderMarginMm / Math.max(1, widthMm)) * minDimension),
+  );
+  const requestedThickness = Math.min(
+    MAX_BORDER_THICKNESS,
+    Math.max(MIN_BORDER_THICKNESS, Math.round(borderThickness)),
+  );
+  const unit = Math.max(1, Math.round(minDimension * 0.00625));
+  const baseThickness = Math.max(1, unit * requestedThickness);
+  const legacyBrokenThickness = Math.max(1, Math.round(minDimension * 0.0125));
+  const lineThickness =
+    style === "broken"
+      ? legacyBrokenThickness
+      : baseThickness;
+  const gap = Math.max(1, Math.round(lineThickness * 0.75));
 
   if (shape === "circle") {
-    drawCircleBands(result, style, outerInset, thinThickness, thickThickness, gap);
+    drawCircleBands(result, style, circleInset, lineThickness, gap);
     return result;
   }
 
   if (style === "double") {
-    drawRectangleBand(result, outerInset, thinThickness, false);
-    drawRectangleBand(result, outerInset + thinThickness + gap, thinThickness, false);
+    drawRectangleBand(
+      result,
+      insetX,
+      insetY,
+      lineThickness,
+      false,
+    );
+    drawRectangleBand(
+      result,
+      insetX + lineThickness + gap,
+      insetY + lineThickness + gap,
+      lineThickness,
+      false,
+    );
     return result;
   }
 
-  const thickness = style === "thick" ? thickThickness : thinThickness;
-  drawRectangleBand(result, outerInset, thickness, style === "broken");
+  drawRectangleBand(
+    result,
+    insetX,
+    insetY,
+    lineThickness,
+    style === "broken",
+  );
   return result;
 }
 
@@ -90,9 +112,19 @@ export function renderFinalBinary(
   overlay: Uint8Array,
   binaryState: WorkBinaryEditState,
   shape: SealShape,
+  widthMm: number,
+  heightMm: number,
 ): RgbaImage {
   const combined = applyManualOverlay(base, overlay);
-  const bordered = applyBorder(combined, binaryState.borderStyle, shape);
+  const bordered = applyBorder(
+    combined,
+    binaryState.borderStyle,
+    shape,
+    binaryState.borderThickness,
+    binaryState.borderMarginMm,
+    widthMm,
+    heightMm,
+  );
   const carved =
     binaryState.carvingMode === "yin" ? invertBinary(bordered) : bordered;
   const oriented =
@@ -102,14 +134,15 @@ export function renderFinalBinary(
 
 function drawRectangleBand(
   image: RgbaImage,
-  inset: number,
+  insetX: number,
+  insetY: number,
   thickness: number,
   broken: boolean,
 ): void {
-  const startX = inset;
-  const endX = image.width - inset - 1;
-  const startY = inset;
-  const endY = image.height - inset - 1;
+  const startX = insetX;
+  const endX = image.width - insetX - 1;
+  const startY = insetY;
+  const endY = image.height - insetY - 1;
   if (startX > endX || startY > endY) {
     return;
   }
@@ -146,8 +179,7 @@ function drawCircleBands(
   image: RgbaImage,
   style: BorderStyle,
   outerInset: number,
-  thinThickness: number,
-  thickThickness: number,
+  thickness: number,
   gap: number,
 ): void {
   const centerX = image.width / 2;
@@ -158,13 +190,13 @@ function drawCircleBands(
   const definitions =
     style === "double"
       ? [
-          { inset: outerInset, thickness: thinThickness },
-          { inset: outerInset + thinThickness + gap, thickness: thinThickness },
+          { inset: outerInset, thickness },
+          { inset: outerInset + thickness + gap, thickness },
         ]
       : [
           {
             inset: outerInset,
-            thickness: style === "thick" ? thickThickness : thinThickness,
+            thickness,
           },
         ];
 

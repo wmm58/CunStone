@@ -77,6 +77,10 @@ describe("ExportWorksPage", () => {
     expect(screen.getByRole("heading", { name: "已添加作品列表" })).toBeVisible();
     expect(screen.getByText("共添加 1 件作品")).toBeVisible();
     expect(screen.getByTestId("placed-work-work-1")).toBeVisible();
+    expect(
+      screen.queryByText(/拖动作品调整位置/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "下载 PDF" })).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "添加作品" }));
     const dialog = screen.getByRole("dialog", { name: "添加已完成作品弹窗" });

@@ -4,6 +4,7 @@ export function installCanvasMock(options?: {
   width?: number;
   height?: number;
   dataUrl?: string;
+  dataUrlFromImageData?: (data: Uint8ClampedArray) => string;
 }) {
   const width = options?.width ?? 2;
   const height = options?.height ?? 2;
@@ -12,6 +13,7 @@ export function installCanvasMock(options?: {
     pixels.set([255, 255, 255, 255], offset);
   }
 
+  let lastImageData: ImageData | null = null;
   const context = {
     clearRect: vi.fn(),
     drawImage: vi.fn(),
@@ -25,7 +27,9 @@ export function installCanvasMock(options?: {
     moveTo: vi.fn(),
     lineTo: vi.fn(),
     stroke: vi.fn(),
-    putImageData: vi.fn(),
+    putImageData: vi.fn((imageData: ImageData) => {
+      lastImageData = imageData;
+    }),
     getImageData: vi.fn(() => ({ width, height, data: pixels })),
     fillStyle: "",
     strokeStyle: "",
@@ -37,7 +41,11 @@ export function installCanvasMock(options?: {
     .mockReturnValue(context);
   const toDataURL = vi
     .spyOn(HTMLCanvasElement.prototype, "toDataURL")
-    .mockReturnValue(options?.dataUrl ?? "data:image/webp;base64,c2FtcGxl");
+    .mockImplementation(() =>
+      options?.dataUrlFromImageData
+        ? options.dataUrlFromImageData(lastImageData?.data ?? pixels)
+        : options?.dataUrl ?? "data:image/webp;base64,c2FtcGxl",
+    );
 
   return {
     context,

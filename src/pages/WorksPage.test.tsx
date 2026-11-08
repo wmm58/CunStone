@@ -107,14 +107,15 @@ describe("WorksPage", () => {
     expect(props.onEditWork).toHaveBeenCalledWith("work-completed-2");
   });
 
-  it("selects completed works, shows count below bulk select and deletes after confirmation", async () => {
+  it("selects completed works, shows count before bulk select and deletes after confirmation", async () => {
     const user = userEvent.setup();
     seedWorks();
     render(<WorksPage {...pageProps()} />);
     await user.click(screen.getByRole("button", { name: "已完成" }));
-    const selectAll = screen.getByRole("button", { name: "一件全选" });
+    const selectAll = screen.getByRole("button", { name: "一键全选" });
     const count = screen.getByText("已选 0 项");
-    expect(count.previousElementSibling).toBe(selectAll);
+    expect(count.nextElementSibling).toBe(selectAll);
+    expect(count.parentElement).toBe(selectAll.parentElement);
 
     await user.click(selectAll);
     expect(screen.getByText("已选 2 项")).toBeVisible();
@@ -139,6 +140,46 @@ describe("WorksPage", () => {
     await user.click(screen.getByRole("button", { name: "全部作品" }));
     expect(screen.getByText("草稿作品")).toBeInTheDocument();
     expect(screen.queryByText("完成作品甲")).not.toBeInTheDocument();
+  });
+
+  it("toggles all completed works off when clicked again", async () => {
+    const user = userEvent.setup();
+    seedWorks();
+    render(<WorksPage {...pageProps()} />);
+    await user.click(screen.getByRole("button", { name: "已完成" }));
+
+    const selectAll = screen.getByRole("button", { name: "一键全选" });
+    await user.click(selectAll);
+    expect(screen.getByText("已选 2 项")).toBeVisible();
+    await user.click(selectAll);
+    expect(screen.getByText("已选 0 项")).toBeVisible();
+    expect(screen.getByLabelText("选择作品 完成作品甲")).not.toBeChecked();
+  });
+
+  it("supports multi-select deletion for drafts without A4 export", async () => {
+    const user = userEvent.setup();
+    seedWorks();
+    render(<WorksPage {...pageProps()} />);
+    await user.click(screen.getByRole("button", { name: "草稿" }));
+
+    expect(screen.getByLabelText("选择作品 草稿作品")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "A4 导出" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "一键全选" }));
+    expect(screen.getByText("已选 1 项")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "删除" }));
+    await user.click(
+      within(screen.getByRole("dialog", { name: "删除作品确认" })).getByRole(
+        "button",
+        { name: "确认删除" },
+      ),
+    );
+
+    await waitFor(() =>
+      expect(listActiveUserWorks().map((work) => work.name)).toEqual([
+        "完成作品乙",
+        "完成作品甲",
+      ]),
+    );
   });
 
   it("clears selection when leaving completed filter and opens A4 export with selected works", async () => {

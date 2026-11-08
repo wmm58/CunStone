@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import BrandHeader from "../components/BrandHeader";
 import type { WorkRecord } from "../domain/types";
 import { getActiveUser } from "../features/auth/authService";
 import { setExportWorkIds } from "../features/export/exportSession";
@@ -90,35 +91,34 @@ export default function WorksPage({
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-8">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="mb-1 text-xs font-semibold tracking-[0.16em] text-slate-500">
-              CUNSTONE · P3
+        <div className="mb-6">
+          <BrandHeader
+            actions={
+              <>
+                <button
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  onClick={onSignOut}
+                  type="button"
+                >
+                  切换账号
+                </button>
+                <button
+                  className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                  onClick={onNewWork}
+                  type="button"
+                >
+                  新建作品
+                </button>
+              </>
+            }
+            pageTitle="作品列表"
+          />
+          {activeUser ? (
+            <p className="mt-2 text-xs text-slate-500">
+              当前账号：{activeUser.phone}
             </p>
-            <h1 className="text-2xl font-bold text-slate-950">作品列表</h1>
-            {activeUser ? (
-              <p className="mt-1 text-xs text-slate-500">
-                当前账号：{activeUser.phone}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              onClick={onSignOut}
-              type="button"
-            >
-              切换账号
-            </button>
-            <button
-              className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-              onClick={onNewWork}
-              type="button"
-            >
-              新建作品
-            </button>
-          </div>
-        </header>
+          ) : null}
+        </div>
 
         <section className="rounded-2xl border border-slate-300 bg-white p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
@@ -140,20 +140,18 @@ export default function WorksPage({
               ))}
             </div>
 
-            {filter === "completed" ? (
+            {filter !== "all" ? (
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex flex-col items-start gap-1">
-                  <button
-                    className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-                    onClick={toggleAll}
-                    type="button"
-                  >
-                    一件全选
-                  </button>
-                  <span className="text-xs text-slate-500">
-                    已选 {selected.size} 项
-                  </span>
-                </div>
+                <span className="text-xs text-slate-500">
+                  已选 {selected.size} 项
+                </span>
+                <button
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                  onClick={toggleAll}
+                  type="button"
+                >
+                  一键全选
+                </button>
                 <button
                   className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={selected.size === 0}
@@ -162,17 +160,19 @@ export default function WorksPage({
                 >
                   删除
                 </button>
-                <button
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={selected.size === 0}
-                  onClick={() => {
-                    setExportWorkIds([...selected]);
-                    onOpenExport();
-                  }}
-                  type="button"
-                >
-                  A4 导出
-                </button>
+                {filter === "completed" ? (
+                  <button
+                    className="rounded-md border border-slate-300 px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={selected.size === 0}
+                    onClick={() => {
+                      setExportWorkIds([...selected]);
+                      onOpenExport();
+                    }}
+                    type="button"
+                  >
+                    A4 导出
+                  </button>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -206,7 +206,7 @@ export default function WorksPage({
                   key={work.id}
                 >
                   <div className="flex items-start gap-3">
-                    {filter === "completed" ? (
+                    {filter !== "all" ? (
                       <input
                         aria-label={`选择作品 ${work.name}`}
                         checked={selected.has(work.id)}

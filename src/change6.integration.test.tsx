@@ -6,8 +6,9 @@ import App from "./App";
 import { FIXED_TEST_CODE } from "./features/auth/authService";
 import { setExportWorkIds } from "./features/export/exportSession";
 import * as imageInput from "./features/editor/imageInput";
-import { readAppState } from "./lib/storage/appStorage";
+import { APP_STORAGE_KEY, readAppState } from "./lib/storage/appStorage";
 import { installCanvasMock } from "./test/canvasMock";
+import { createV3MigrationFixtures } from "./test/migrationFixtures";
 
 const { downloadPdfMock } = vi.hoisted(() => ({
   downloadPdfMock: vi.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70])),
@@ -117,28 +118,55 @@ describe("Change 6 integration", () => {
     await screen.findByLabelText("编辑画布");
     await user.clear(screen.getByLabelText("作品名称"));
     await user.type(screen.getByLabelText("作品名称"), "固定上传样本");
-    await user.click(screen.getByRole("button", { name: "保存（已完成）" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "黑白稿编辑" })).toBeEnabled(),
+    );
+    await user.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(readAppState().state.works).toHaveLength(1));
 
     await finishThroughPdf("固定上传样本");
   }, 15_000);
 
-  it("runs the fixed hand-drawn sample from login to PDF download", async () => {
-    render(<App />);
-    const user = await loginWithUi();
-    await screen.findByRole("heading", { name: "创作编辑" });
-    await user.click(screen.getByRole("button", { name: "手绘画布" }));
-    const drawing = screen.getByLabelText("手绘画布");
-    mockRect(drawing);
-    fireEvent.pointerDown(drawing, { clientX: 30, clientY: 30, pointerId: 1 });
-    fireEvent.pointerUp(drawing, { clientX: 30, clientY: 30, pointerId: 1 });
-    await user.click(screen.getByRole("button", { name: "使用手绘稿" }));
-    await screen.findByLabelText("编辑画布");
-    await user.clear(screen.getByLabelText("作品名称"));
-    await user.type(screen.getByLabelText("作品名称"), "固定手绘样本");
-    await user.click(screen.getByRole("button", { name: "保存（已完成）" }));
-    await waitFor(() => expect(readAppState().state.works).toHaveLength(1));
+  it("keeps a historical hand-drawn sample previewable and exportable to PDF", async () => {
+    const fixtures = createV3MigrationFixtures();
+    window.localStorage.setItem(
+      APP_STORAGE_KEY,
+      JSON.stringify({
+        ...fixtures,
+        works: fixtures.works.filter((work) => work.id === "legacy-drawing"),
+      }),
+    );
+    window.location.hash = "#/editor/legacy-drawing";
 
-    await finishThroughPdf("固定手绘样本");
+    render(<App />);
+    const user = userEvent.setup();
+
+    expect(await screen.findByDisplayValue("legacy-drawing")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "手绘画布" })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "黑白稿编辑" })).toBeEnabled(),
+    );
+    await user.click(screen.getByRole("button", { name: "作品列表" }));
+    await screen.findByRole("heading", { name: "作品列表" });
+    await user.click(screen.getByRole("button", { name: "已完成" }));
+    const card = screen.getByText("legacy-drawing").closest("article");
+    expect(card).not.toBeNull();
+    await user.click(within(card as HTMLElement).getByRole("button", { name: "预览" }));
+    expect(
+      await screen.findByLabelText("legacy-drawing 红印预览"),
+    ).toBeVisible();
+    await user.click(
+      within(screen.getByRole("dialog", { name: "作品预览弹窗" })).getByRole(
+        "button",
+        { name: "关闭" },
+      ),
+    );
+    await user.click(screen.getByLabelText("选择作品 legacy-drawing"));
+    await user.click(screen.getByRole("button", { name: "A4 导出" }));
+    await screen.findByRole("heading", { name: "A4 导出" });
+    expect(screen.getByText("共添加 1 件作品")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "下载 PDF" }));
+    expect(await screen.findByText("PDF 已生成并开始下载。")).toBeVisible();
+    expect(downloadPdfMock).toHaveBeenCalledOnce();
   }, 15_000);
 });

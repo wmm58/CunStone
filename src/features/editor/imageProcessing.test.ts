@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createDefaultWorkImageState } from "../../domain/types";
+import {
+  createDefaultWorkImageState,
+  type BackgroundRemovalRule,
+} from "../../domain/types";
 import {
   colorDistance,
   createCutoutImage,
@@ -41,6 +44,14 @@ const palette: Record<string, [number, number, number, number]> = {
   G: [0, 255, 0, 255],
 };
 
+function rule(
+  id: string,
+  color: string | null,
+  tolerance: number,
+): BackgroundRemovalRule {
+  return { id, color, tolerance };
+}
+
 describe("imageProcessing", () => {
   it("parses colors and maps tolerance to RGB distance", () => {
     expect(parseHexColor("#FFFFFF")).toEqual({ r: 255, g: 255, b: 255 });
@@ -53,8 +64,8 @@ describe("imageProcessing", () => {
 
   it("removes only pixels within the selected background tolerance", () => {
     const source = imageFromRows(["WNN", "WRN", "WWW"], palette);
-    const exact = createSubjectMask(source, "#ffffff", 0);
-    const wide = createSubjectMask(source, "#ffffff", 100);
+    const exact = createSubjectMask(source, [rule("white", "#ffffff", 0)]);
+    const wide = createSubjectMask(source, [rule("white", "#ffffff", 100)]);
 
     expect([...exact]).toEqual([0, 1, 1, 0, 1, 1, 0, 0, 0]);
     expect([...wide]).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -70,12 +81,61 @@ describe("imageProcessing", () => {
       palette,
     );
 
-    expect([...createSubjectMask(blue, "#0000ff", 0)]).toEqual([
+    expect([...createSubjectMask(blue, [rule("blue", "#0000ff", 0)])]).toEqual([
       0, 0, 0, 0, 1, 1, 0, 0, 0,
     ]);
-    expect([...createSubjectMask(green, "#00ff00", 0)]).toEqual([
+    expect([...createSubjectMask(green, [rule("green", "#00ff00", 0)])]).toEqual([
       0, 0, 0, 0, 1, 0, 0, 0, 0,
     ]);
+  });
+
+  it("removes the union of multiple backgrounds and ignores empty rules", () => {
+    const source = imageFromRows(
+      ["WUW", "WGR", "WUW"],
+      palette,
+    );
+    const rules = [
+      rule("empty", null, 100),
+      rule("white", "#ffffff", 0),
+      rule("blue", "#0000ff", 0),
+    ];
+
+    expect([...createSubjectMask(source, rules)]).toEqual([
+      0, 0, 0,
+      0, 1, 1,
+      0, 0, 0,
+    ]);
+    expect([...createSubjectMask(source, [])]).toEqual(new Array(9).fill(1));
+  });
+
+  it("supports ten rules and produces the same union regardless of order", () => {
+    const colors = [
+      "#ffffff",
+      "#0000ff",
+      "#00ff00",
+      "#ff0000",
+      "#fafafa",
+      "#000001",
+      "#00ff01",
+      "#ff0001",
+      "#fafafb",
+      "#000002",
+    ];
+    const source = imageFromRows(
+      ["WUR", "NGT", "WUR"],
+      palette,
+    );
+    const rules = colors.map((color, index) => rule(`rule-${index}`, color, 10));
+    const reversed = [...rules].reverse();
+
+    expect([...createSubjectMask(source, rules)]).toEqual([
+      0, 0, 1,
+      0, 0, 0,
+      0, 0, 1,
+    ]);
+    expect([...createSubjectMask(source, reversed)]).toEqual(
+      [...createSubjectMask(source, rules)],
+    );
   });
 
   it("finds and crops the visible-content bounds", () => {
@@ -112,7 +172,7 @@ describe("imageProcessing", () => {
   it("treats transparent source pixels as background", () => {
     const source = imageFromRows(["WTW"], palette);
 
-    expect([...createSubjectMask(source, null, 20)]).toEqual([1, 0, 1]);
+    expect([...createSubjectMask(source, [])]).toEqual([1, 0, 1]);
   });
 
   it("sharpens a binary mask without producing intermediate values", () => {
@@ -124,6 +184,22 @@ describe("imageProcessing", () => {
     const sharpened = sharpenMask(mask, 3, 3);
 
     expect([...sharpened].every((value) => value === 0 || value === 1)).toBe(true);
+  });
+
+  it("applies sharpen amount from zero to eight without gray pixels", () => {
+    const mask = new Uint8Array([
+      0, 0, 0, 0, 0,
+      0, 1, 1, 1, 0,
+      0, 1, 0, 1, 0,
+      0, 1, 1, 1, 0,
+      0, 0, 0, 0, 0,
+    ]);
+    const none = sharpenMask(mask, 5, 5, 0);
+    const strong = sharpenMask(mask, 5, 5, 8);
+
+    expect([...none]).toEqual([...mask]);
+    expect([...strong].every((value) => value === 0 || value === 1)).toBe(true);
+    expect([...strong]).not.toEqual([...none]);
   });
 
   it("fits content inside square and circular seal bounds", () => {
@@ -142,22 +218,70 @@ describe("imageProcessing", () => {
     expect(circle.mask[0]).toBe(0);
   });
 
-  it("uses the requested rectangle and custom aspect ratios", () => {
+  it("uses the requested rectangle aspect ratio", () => {
     const mask = new Uint8Array(9).fill(1);
     const rectangle = fitMaskToShape(mask, 3, 3, "rectangle", 20, 40, 80);
-    const custom = fitMaskToShape(mask, 3, 3, "custom", 30, 10, 90);
 
     expect(rectangle).toMatchObject({ width: 40, height: 80 });
-    expect(custom).toMatchObject({ width: 90, height: 30 });
+  });
+
+  it("shrinks fitted content as the outer margin increases", () => {
+    const mask = new Uint8Array(9).fill(1);
+    const noMargin = fitMaskToShape(mask, 3, 3, "square", 25, 25, 80, 0);
+    const largeMargin = fitMaskToShape(mask, 3, 3, "square", 25, 25, 80, 20);
+    const countBlack = (target: Uint8Array) =>
+      [...target].filter((value) => value === 1).length;
+
+    expect(countBlack(largeMargin.mask)).toBeLessThan(
+      countBlack(noMargin.mask),
+    );
+  });
+
+  it("uses millimetres for outer margin and reaches the edge at zero", () => {
+    const mask = new Uint8Array(9).fill(1);
+    const noMargin = fitMaskToShape(mask, 3, 3, "square", 20, 20, 80, 0);
+    const fiveMillimetres = fitMaskToShape(
+      mask,
+      3,
+      3,
+      "square",
+      20,
+      20,
+      80,
+      5,
+    );
+
+    expect(noMargin.mask[0]).toBe(1);
+    expect(noMargin.mask[80 * 40 + 0]).toBe(1);
+    expect(fiveMillimetres.mask[80 * 40 + 19]).toBe(0);
+    expect(fiveMillimetres.mask[80 * 40 + 20]).toBe(1);
+    expect(fiveMillimetres.mask[80 * 40 + 59]).toBe(1);
+    expect(fiveMillimetres.mask[80 * 40 + 60]).toBe(0);
   });
 
   it("creates a transparent cutout preserving subject colors", () => {
     const source = imageFromRows(["WRW"], palette);
-    const cutout = createCutoutImage(source, "#ffffff", 0);
+    const cutout = createCutoutImage(source, [rule("white", "#ffffff", 0)]);
 
     expect(cutout.data[3]).toBe(0);
     expect([...cutout.data.slice(4, 8)]).toEqual([220, 20, 20, 255]);
     expect(cutout.data[11]).toBe(0);
+  });
+
+  it("applies the same multi-background union to cutouts", () => {
+    const source = imageFromRows(["WUR"], palette);
+    const rules = [
+      rule("white", "#ffffff", 0),
+      rule("blue", "#0000ff", 0),
+    ];
+    const cutout = createCutoutImage(source, rules);
+
+    expect(cutout.data[3]).toBe(0);
+    expect(cutout.data[7]).toBe(0);
+    expect([...cutout.data.slice(8, 12)]).toEqual([220, 20, 20, 255]);
+
+    const restored = createCutoutImage(source, []);
+    expect([...restored.data]).toEqual([...source.data]);
   });
 
   it("renders silhouette and outline drafts as pure black and white", () => {
@@ -167,8 +291,7 @@ describe("imageProcessing", () => {
     );
     const base = {
       ...createDefaultWorkImageState(),
-      backgroundColor: "#ffffff",
-      tolerance: 10,
+      backgroundRules: [rule("white", "#ffffff", 10)],
       widthMm: 25,
       heightMm: 25,
     };
@@ -188,6 +311,34 @@ describe("imageProcessing", () => {
     expect(silhouette.data).toContain(255);
   });
 
+  it("renders thicker outlines with more black pixels at levels 1 to 8", () => {
+    const source = imageFromRows(
+      ["WWWWW", "WBBBW", "WBBBW", "WBBBW", "WWWWW"],
+      palette,
+    );
+    const state = {
+      ...createDefaultWorkImageState(),
+      backgroundRules: [rule("white", "#ffffff", 0)],
+      effectMode: "outline" as const,
+    };
+    const thin = renderBinaryDraft(source, {
+      ...state,
+      outlineThickness: 1,
+    });
+    const thick = renderBinaryDraft(source, {
+      ...state,
+      outlineThickness: 8,
+    });
+    const blackCount = (image: typeof thin) =>
+      Array.from({ length: image.data.length / 4 }, (_, index) =>
+        image.data[index * 4],
+      ).filter((value) => value === 0).length;
+
+    expect(blackCount(thick)).toBeGreaterThan(blackCount(thin));
+    expect(isBinaryBlackWhite(thin)).toBe(true);
+    expect(isBinaryBlackWhite(thick)).toBe(true);
+  });
+
   it("keeps the hole in an outline draft and returns blank white when nothing remains", () => {
     const ring = imageFromRows(
       ["WWWWW", "WBBBW", "WBWBW", "WBBBW", "WWWWW"],
@@ -195,8 +346,7 @@ describe("imageProcessing", () => {
     );
     const state = {
       ...createDefaultWorkImageState(),
-      backgroundColor: "#ffffff",
-      tolerance: 0,
+      backgroundRules: [rule("white", "#ffffff", 0)],
       effectMode: "outline" as const,
     };
     const outline = renderBinaryDraft(ring, state);

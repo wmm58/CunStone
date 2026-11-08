@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 
+import BrandHeader from "../components/BrandHeader";
 import type { WorkRecord } from "../domain/types";
 import {
   A4_PAGE,
@@ -168,30 +169,29 @@ export default function ExportWorksPage({
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-8">
       <div className="mx-auto max-w-[1440px]">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="mb-1 text-xs font-semibold tracking-[0.16em] text-slate-500">
-              CUNSTONE · P4
-            </p>
-            <h1 className="text-2xl font-bold text-slate-950">A4 导出</h1>
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              onClick={onBack}
-              type="button"
-            >
-              返回作品列表
-            </button>
-            <button
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              onClick={onSignOut}
-              type="button"
-            >
-              切换账号
-            </button>
-          </div>
-        </header>
+        <div className="mb-6">
+          <BrandHeader
+            actions={
+              <>
+                <button
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  onClick={onBack}
+                  type="button"
+                >
+                  返回作品列表
+                </button>
+                <button
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  onClick={onSignOut}
+                  type="button"
+                >
+                  切换账号
+                </button>
+              </>
+            }
+            pageTitle="A4 导出"
+          />
+        </div>
 
         <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
           <aside
@@ -299,6 +299,14 @@ export default function ExportWorksPage({
                   value={spacing.verticalGapMm}
                 />
               </label>
+              <button
+                className="ml-auto rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                disabled={exporting}
+                onClick={handleDownloadPdf}
+                type="button"
+              >
+                {exporting ? "正在生成 PDF…" : "下载 PDF"}
+              </button>
             </div>
 
             {notice ? (
@@ -395,20 +403,6 @@ export default function ExportWorksPage({
                 type="button"
               >
                 下一页
-              </button>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
-              <span className="text-xs text-slate-500">
-                拖动作品调整位置；PDF 仅包含黑白稿，不包含红印效果。
-              </span>
-              <button
-                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
-                disabled={exporting}
-                onClick={handleDownloadPdf}
-                type="button"
-              >
-                {exporting ? "正在生成 PDF…" : "下载 PDF"}
               </button>
             </div>
           </section>

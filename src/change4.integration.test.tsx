@@ -112,7 +112,7 @@ describe("Change 4 integration", () => {
     await screen.findByRole("heading", { name: "作品列表" });
     await user.click(screen.getByRole("button", { name: "已完成" }));
     expect(screen.queryByText("草稿作品")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "一件全选" }));
+    await user.click(screen.getByRole("button", { name: "一键全选" }));
     expect(screen.getByText("已选 1 项")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "删除" }));
     await user.click(

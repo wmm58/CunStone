@@ -37,6 +37,8 @@ export function renderWorkBlackWhite(
     overlay,
     work.binaryState,
     work.imageState.shape,
+    work.imageState.widthMm,
+    work.imageState.heightMm,
   );
 }
 

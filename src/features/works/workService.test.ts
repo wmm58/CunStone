@@ -115,8 +115,9 @@ describe("workService", () => {
       shape: "circle" as const,
       widthMm: 30,
       heightMm: 30,
-      backgroundColor: "#ffffff",
-      tolerance: 35,
+      backgroundRules: [
+        { id: "white", color: "#ffffff", tolerance: 35 },
+      ],
       effectMode: "outline" as const,
     };
 
@@ -148,9 +149,11 @@ describe("workService", () => {
       overlayHeight: 2,
       generationSignature: "signature",
       brushSize: 12,
+      eraserSize: 14,
       carvingMode: "yin" as const,
       orientation: "mirror" as const,
       borderStyle: "double" as const,
+      borderThickness: 7,
     };
 
     const result = updateWork(

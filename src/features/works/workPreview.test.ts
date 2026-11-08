@@ -33,6 +33,16 @@ function work(overrides: Partial<WorkRecord> = {}): WorkRecord {
   };
 }
 
+function blackCount(image: RgbaImage): number {
+  let count = 0;
+  for (let offset = 0; offset < image.data.length; offset += 4) {
+    if (image.data[offset] === 0) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 describe("workPreview", () => {
   it("rebuilds a pure black-white preview from saved work state", () => {
     const preview = renderWorkBlackWhite(work(), source);
@@ -51,9 +61,75 @@ describe("workPreview", () => {
     expect(invalidPixels).toBe(0);
   });
 
+  it("uses saved border thickness in the shared preview renderer", () => {
+    const imageState = {
+      ...createDefaultWorkImageState(),
+      sourceDataUrl: "source",
+      backgroundRules: [
+        { id: "white", color: "#ffffff", tolerance: 0 },
+      ],
+      sharpenAmount: 0,
+    };
+    const thin = renderWorkBlackWhite(
+      work({
+        imageState,
+        binaryState: {
+          ...createDefaultWorkBinaryState(),
+          borderStyle: "single",
+          borderThickness: 1,
+        },
+      }),
+      source,
+    );
+    const thick = renderWorkBlackWhite(
+      work({
+        imageState,
+        binaryState: {
+          ...createDefaultWorkBinaryState(),
+          borderStyle: "single",
+          borderThickness: 8,
+        },
+      }),
+      source,
+    );
+
+    expect(blackCount(thick)).toBeGreaterThan(blackCount(thin));
+  });
+
+  it("renders a historical broken border in the shared preview", () => {
+    const imageState = {
+      ...createDefaultWorkImageState(),
+      sourceDataUrl: "source",
+      backgroundRules: [
+        { id: "white", color: "#ffffff", tolerance: 0 },
+      ],
+    };
+    const preview = renderWorkBlackWhite(
+      work({
+        imageState,
+        binaryState: {
+          ...createDefaultWorkBinaryState(),
+          borderStyle: "broken",
+        },
+      }),
+      source,
+    );
+
+    expect(blackCount(preview)).toBeGreaterThan(0);
+  });
+
   it("maps black pixels to clean red and keeps white pixels white", () => {
     const blackWhite = renderWorkBlackWhite(
-      work({ imageState: { ...createDefaultWorkImageState(), sourceDataUrl: "source" } }),
+      work({
+        imageState: {
+          ...createDefaultWorkImageState(),
+          sourceDataUrl: "source",
+          sharpenAmount: 0,
+          backgroundRules: [
+            { id: "white", color: "#ffffff", tolerance: 0 },
+          ],
+        },
+      }),
       source,
     );
     const red = renderRedImpression(blackWhite);

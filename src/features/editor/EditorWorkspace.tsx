@@ -1,547 +1,207 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type {
   WorkBinaryEditState,
   WorkImageState,
 } from "../../domain/types";
-import { decodeOverlay, encodeOverlay } from "../../lib/binary/overlayCodec";
 import BinaryEditorCanvas from "./BinaryEditorCanvas";
 import BinaryEditorPanel from "./BinaryEditorPanel";
-import DrawingCanvas from "./DrawingCanvas";
+import BinaryPreparationPanel from "./BinaryPreparationPanel";
 import EditorCanvas from "./EditorCanvas";
-import ImagePreparationPanel from "./ImagePreparationPanel";
-import {
-  clearManualEdits,
-  createEmptyOverlay,
-  getNeutralOverlayValue,
-  hasManualEdits,
-  mapFinalPointToNeutral,
-  paintStroke,
-  recordStrokeHistory,
-  redoOverlay,
-  undoOverlay,
-  type EditTool,
-  type OverlayHistory,
-  type PixelPoint,
-} from "./binaryEditing";
-import {
-  createGenerationSignature,
-  renderFinalBinary,
-} from "./binaryRendering";
-import { prepareSourceDataUrl, prepareSourceFile } from "./imageInput";
-import {
-  createCutoutImage,
-  renderBinaryDraft,
-  rgbToHex,
-  type RgbaImage,
-} from "./imageProcessing";
+import InputEditingPanel from "./InputEditingPanel";
+import type { ImageCanvasTool } from "./imageEditingTypes";
+import { clampZoom, useEditorSession, ZOOM_STEP_VALUE } from "./useEditorSession";
 
-// 像素编解码、渲染和面板已拆分；本层只协调编辑会话，仍可在后续提取为独立 hook。
 interface EditorWorkspaceProps {
-  imageState: WorkImageState;
   binaryState: WorkBinaryEditState;
+  clearRequestId?: number;
+  imageState: WorkImageState;
+  onBinaryStateChange: (next: WorkBinaryEditState) => void;
+  onBeforeUpload?: (openPicker: () => void) => void;
+  onContentAvailabilityChange?: (available: boolean) => void;
   onImageStateChange: (
     next: WorkImageState,
     resetManualEdits?: boolean,
+    autosaveMode?: "defer" | "resume",
   ) => void;
-  onBinaryStateChange: (next: WorkBinaryEditState) => void;
 }
-
-type CanvasMode = "input" | "binary";
-
-interface PendingImageChange {
-  next: WorkImageState;
-  fileName?: string;
-}
-
-const MIN_ZOOM = 50;
-const MAX_ZOOM = 400;
-const ZOOM_STEP = 25;
 
 export default function EditorWorkspace({
-  imageState,
   binaryState,
-  onImageStateChange,
+  clearRequestId = 0,
+  imageState,
   onBinaryStateChange,
+  onBeforeUpload,
+  onContentAvailabilityChange,
+  onImageStateChange,
 }: EditorWorkspaceProps) {
-  const [sourceRaster, setSourceRaster] = useState<RgbaImage | null>(null);
-  const [mode, setMode] = useState<CanvasMode>("input");
-  const [drawing, setDrawing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [overlay, setOverlayState] = useState<Uint8Array | null>(null);
-  const overlayRef = useRef<Uint8Array | null>(null);
-  const [history, setHistory] = useState<OverlayHistory>({ undo: [], redo: [] });
-  const [tool, setTool] = useState<EditTool>("brush");
-  const [zoom, setZoom] = useState(100);
-  const [pendingChange, setPendingChange] = useState<PendingImageChange | null>(
-    null,
-  );
-  const [signatureWarning, setSignatureWarning] = useState("");
-  const loadedOverlayKeyRef = useRef("");
-  const strokeStartSnapshotRef = useRef<string | null>(null);
-  const lastPointRef = useRef<PixelPoint | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageTool, setImageTool] = useState<ImageCanvasTool>("sample");
+  const session = useEditorSession({
+    binaryState,
+    clearRequestId,
+    imageState,
+    onBinaryStateChange,
+    onContentAvailabilityChange,
+    onImageStateChange,
+  });
 
   useEffect(() => {
-    let cancelled = false;
     if (!imageState.sourceDataUrl) {
-      setSourceRaster(null);
-      setMode("input");
-      setBusy(false);
-      setWorkingOverlay(null);
-      setHistory({ undo: [], redo: [] });
-      return;
+      setImageTool("sample");
     }
+  }, [clearRequestId, imageState.sourceDataUrl]);
 
-    setBusy(true);
-    setError("");
-    prepareSourceDataUrl(imageState.sourceDataUrl)
-      .then((source) => {
-        if (!cancelled) {
-          setSourceRaster(source.raster);
-          setBusy(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSourceRaster(null);
-          setBusy(false);
-          setError("图片无法读取，请重新上传或手绘");
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [imageState.sourceDataUrl]);
-
-  const cutout = useMemo(
-    () =>
-      sourceRaster
-        ? createCutoutImage(
-            sourceRaster,
-            imageState.backgroundColor,
-            imageState.tolerance,
-          )
-        : null,
-    [imageState.backgroundColor, imageState.tolerance, sourceRaster],
-  );
-
-  const baseBinary = useMemo(
-    () => (sourceRaster ? renderBinaryDraft(sourceRaster, imageState) : null),
-    [imageState, sourceRaster],
-  );
-
-  const generationSignature = useMemo(
-    () => createGenerationSignature(imageState),
-    [imageState],
-  );
-
-  useEffect(() => {
-    if (!baseBinary) {
-      setWorkingOverlay(null);
-      return;
+  function requestUpload() {
+    const openPicker = () => fileInputRef.current?.click();
+    if (onBeforeUpload) {
+      onBeforeUpload(openPicker);
+    } else {
+      openPicker();
     }
-
-    const key = `${generationSignature}:${baseBinary.width}:${baseBinary.height}`;
-    if (loadedOverlayKeyRef.current === key) {
-      return;
-    }
-    loadedOverlayKeyRef.current = key;
-    setHistory({ undo: [], redo: [] });
-    setSignatureWarning("");
-
-    if (!binaryState.overlayData) {
-      setWorkingOverlay(createEmptyOverlay(baseBinary.width, baseBinary.height));
-      return;
-    }
-
-    if (
-      binaryState.generationSignature !== generationSignature ||
-      binaryState.overlayWidth !== baseBinary.width ||
-      binaryState.overlayHeight !== baseBinary.height
-    ) {
-      setWorkingOverlay(createEmptyOverlay(baseBinary.width, baseBinary.height));
-      setSignatureWarning("基础稿已变化，请重新修整");
-      return;
-    }
-
-    const decoded = decodeOverlay(
-      binaryState.overlayData,
-      baseBinary.width,
-      baseBinary.height,
-    );
-    if (!decoded) {
-      setWorkingOverlay(createEmptyOverlay(baseBinary.width, baseBinary.height));
-      setSignatureWarning("修整数据损坏，请重新修整");
-      return;
-    }
-
-    setWorkingOverlay(decoded);
-  }, [
-    baseBinary,
-    binaryState.generationSignature,
-    binaryState.overlayData,
-    binaryState.overlayHeight,
-    binaryState.overlayWidth,
-    generationSignature,
-  ]);
-
-  const finalBinary = useMemo(
-    () =>
-      baseBinary && overlay
-        ? renderFinalBinary(baseBinary, overlay, binaryState, imageState.shape)
-        : null,
-    [baseBinary, binaryState, imageState.shape, overlay],
-  );
-
-  const editsAvailable = Boolean(baseBinary && overlay);
-
-  function setWorkingOverlay(next: Uint8Array | null) {
-    overlayRef.current = next;
-    setOverlayState(next);
-  }
-
-  function requestImageChange(next: WorkImageState, nextFileName?: string) {
-    if (nextFileName === undefined && createGenerationSignature(next) === generationSignature) {
-      return;
-    }
-    if (hasManualEdits(overlayRef.current)) {
-      setPendingChange({ next, fileName: nextFileName });
-      return;
-    }
-    onImageStateChange(next);
-    if (nextFileName !== undefined) {
-      setFileName(nextFileName);
-    }
-  }
-
-  async function handleUploadFile(file: File) {
-    setBusy(true);
-    setError("");
-    try {
-      const source = await prepareSourceFile(file);
-      requestImageChange(
-        {
-          ...imageState,
-          sourceKind: "upload",
-          sourceDataUrl: source.dataUrl,
-          backgroundColor: null,
-        },
-        file.name,
-      );
-    } catch (caught) {
-      setError(fileErrorMessage(caught));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleDrawingCommit(dataUrl: string) {
-    setBusy(true);
-    setError("");
-    try {
-      const source = await prepareSourceDataUrl(dataUrl);
-      setDrawing(false);
-      requestImageChange(
-        {
-          ...imageState,
-          sourceKind: "drawing",
-          sourceDataUrl: source.dataUrl,
-          backgroundColor: null,
-        },
-        "",
-      );
-    } catch {
-      setError("手绘稿无法读取，请重试");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function confirmReset() {
-    if (!pendingChange) {
-      return;
-    }
-    const change = pendingChange;
-    setPendingChange(null);
-    clearLocalEdits();
-    if (change.fileName !== undefined) {
-      setFileName(change.fileName);
-    }
-    if (change.next.sourceDataUrl !== imageState.sourceDataUrl) {
-      setMode("input");
-    }
-    onBinaryStateChange(clearManualEdits(binaryState));
-    onImageStateChange(change.next, true);
-  }
-
-  function clearLocalEdits() {
-    setWorkingOverlay(null);
-    setHistory({ undo: [], redo: [] });
-    strokeStartSnapshotRef.current = null;
-    lastPointRef.current = null;
-    loadedOverlayKeyRef.current = "";
-    setSignatureWarning("");
-  }
-
-  function handleBackgroundSample(x: number, y: number) {
-    if (!sourceRaster) {
-      return;
-    }
-    const offset = (y * sourceRaster.width + x) * 4;
-    if (sourceRaster.data[offset + 3] === 0) {
-      setError("这里没有可采样的颜色，请点击有颜色的背景区域");
-      return;
-    }
-    setError("");
-    requestImageChange({
-      ...imageState,
-      backgroundColor: rgbToHex({
-        r: sourceRaster.data[offset],
-        g: sourceRaster.data[offset + 1],
-        b: sourceRaster.data[offset + 2],
-      }),
-    });
-  }
-
-  function handleStrokeStart(point: PixelPoint) {
-    if (!baseBinary || !overlayRef.current) {
-      return;
-    }
-    strokeStartSnapshotRef.current = encodeOverlay(
-      overlayRef.current,
-      baseBinary.width,
-      baseBinary.height,
-    );
-    const neutral = mapFinalPointToNeutral(
-      point,
-      baseBinary.width,
-      binaryState.orientation === "mirror",
-    );
-    lastPointRef.current = neutral;
-    const next = paintStroke(
-      overlayRef.current,
-      baseBinary.width,
-      baseBinary.height,
-      neutral,
-      neutral,
-      binaryState.brushSize,
-      getNeutralOverlayValue(tool, binaryState.carvingMode),
-    );
-    setWorkingOverlay(next);
-  }
-
-  function handleStrokeMove(point: PixelPoint) {
-    if (!baseBinary || !overlayRef.current || !lastPointRef.current) {
-      return;
-    }
-    const neutral = mapFinalPointToNeutral(
-      point,
-      baseBinary.width,
-      binaryState.orientation === "mirror",
-    );
-    const next = paintStroke(
-      overlayRef.current,
-      baseBinary.width,
-      baseBinary.height,
-      lastPointRef.current,
-      neutral,
-      binaryState.brushSize,
-      getNeutralOverlayValue(tool, binaryState.carvingMode),
-    );
-    lastPointRef.current = neutral;
-    setWorkingOverlay(next);
-  }
-
-  function handleStrokeEnd() {
-    const current = overlayRef.current;
-    const before = strokeStartSnapshotRef.current;
-    if (!baseBinary || !current || before === null) {
-      return;
-    }
-    const after = encodeOverlay(current, baseBinary.width, baseBinary.height);
-    setHistory((currentHistory) =>
-      recordStrokeHistory(currentHistory, before),
-    );
-    persistOverlay(current, baseBinary);
-    strokeStartSnapshotRef.current = null;
-    lastPointRef.current = null;
-    if (after === before) {
-      setHistory((currentHistory) => ({
-        undo: currentHistory.undo.slice(0, -1),
-        redo: currentHistory.redo,
-      }));
-    }
-  }
-
-  function handleUndo() {
-    if (!baseBinary || !overlayRef.current) {
-      return;
-    }
-    const currentSnapshot = encodeOverlay(
-      overlayRef.current,
-      baseBinary.width,
-      baseBinary.height,
-    );
-    const result = undoOverlay(history, currentSnapshot);
-    if (!result) {
-      return;
-    }
-    const decoded = decodeOverlay(result.snapshot, baseBinary.width, baseBinary.height);
-    if (!decoded) {
-      return;
-    }
-    setHistory(result.history);
-    setWorkingOverlay(decoded);
-    persistOverlay(decoded, baseBinary);
-  }
-
-  function handleRedo() {
-    if (!baseBinary || !overlayRef.current) {
-      return;
-    }
-    const currentSnapshot = encodeOverlay(
-      overlayRef.current,
-      baseBinary.width,
-      baseBinary.height,
-    );
-    const result = redoOverlay(history, currentSnapshot);
-    if (!result) {
-      return;
-    }
-    const decoded = decodeOverlay(result.snapshot, baseBinary.width, baseBinary.height);
-    if (!decoded) {
-      return;
-    }
-    setHistory(result.history);
-    setWorkingOverlay(decoded);
-    persistOverlay(decoded, baseBinary);
-  }
-
-  function persistOverlay(next: Uint8Array, base: RgbaImage) {
-    if (!hasManualEdits(next)) {
-      onBinaryStateChange(clearManualEdits(binaryState));
-      return;
-    }
-    onBinaryStateChange({
-      ...binaryState,
-      overlayData: encodeOverlay(next, base.width, base.height),
-      overlayWidth: base.width,
-      overlayHeight: base.height,
-      generationSignature,
-    });
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="space-y-3" aria-label="编辑工具">
-        <ImagePreparationPanel
-          busy={busy}
-          fileName={fileName}
-          imageState={imageState}
-          onRequestChange={requestImageChange}
-          onStartDrawing={() => {
-            setDrawing(true);
-            setMode("input");
-          }}
-          onUploadFile={handleUploadFile}
-          sourceAvailable={Boolean(sourceRaster)}
-        />
-        <BinaryEditorPanel
-          binaryState={binaryState}
-          canRedo={history.redo.length > 0}
-          canUndo={history.undo.length > 0}
-          disabled={!editsAvailable}
-          onChange={onBinaryStateChange}
-          onRedo={handleRedo}
-          onToolChange={setTool}
-          onUndo={handleUndo}
-          onZoomFit={() => setZoom(100)}
-          onZoomIn={() => setZoom((value) => clampZoom(value + ZOOM_STEP))}
-          onZoomOut={() => setZoom((value) => clampZoom(value - ZOOM_STEP))}
-          tool={tool}
-          zoom={zoom}
-        />
-        {error ? (
+    <div
+      className="grid h-full min-h-0 w-full gap-4 xl:grid-cols-[300px_minmax(0,1fr)] xl:items-stretch"
+      data-testid="editor-workspace"
+    >
+      <aside
+        aria-label="编辑工具"
+        className="min-h-0 space-y-3 xl:h-full xl:overflow-y-auto xl:pr-2"
+      >
+        <div className="rounded-xl border border-slate-200 bg-white p-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              aria-pressed={session.mode === "input"}
+              className={
+                session.mode === "input" ? activeModeClass : inactiveModeClass
+              }
+              onClick={() => session.switchMode("input")}
+              type="button"
+            >
+              图片编辑
+            </button>
+            <button
+              aria-pressed={session.mode === "binary"}
+              className={
+                session.mode === "binary" ? activeModeClass : inactiveModeClass
+              }
+              onClick={() => session.switchMode("binary")}
+              type="button"
+            >
+              黑白稿编辑
+            </button>
+          </div>
+        </div>
+        {session.mode === "input" ? (
+          <InputEditingPanel
+            activeRuleId={session.activeRuleId}
+            activeTool={imageTool}
+            busy={session.busy}
+            eraserSize={imageState.imageEraserSize}
+            fileName={session.fileName}
+            inputRef={fileInputRef}
+            onActivateRule={(id) => {
+              session.setActiveRuleId(id);
+              setImageTool("sample");
+            }}
+            onAddRule={session.addBackgroundRule}
+            onEraserSizeChange={session.setImageEraserSize}
+            onRemoveRule={session.removeBackgroundRule}
+            onRequestUpload={requestUpload}
+            onSelectTool={setImageTool}
+            onToleranceChange={session.updateBackgroundTolerance}
+            onUploadFile={(file) => {
+              setImageTool("sample");
+              void session.handleUploadFile(file);
+            }}
+            rules={imageState.backgroundRules}
+          />
+        ) : (
+          <>
+            <BinaryPreparationPanel
+              busy={session.busy}
+              imageState={imageState}
+              onRequestChange={session.requestImageChange}
+              sourceAvailable={Boolean(session.baseBinary)}
+            />
+            <BinaryEditorPanel
+              binaryState={binaryState}
+              canRedo={session.history.redo.length > 0}
+              canUndo={session.history.undo.length > 0}
+              disabled={!session.editsAvailable}
+              onChange={onBinaryStateChange}
+              onRedo={session.handleRedo}
+              onToolChange={session.setTool}
+              onUndo={session.handleUndo}
+              onZoomFit={() => session.setZoom(100)}
+              onZoomIn={() =>
+                session.setZoom((value) => clampZoom(value + ZOOM_STEP_VALUE))
+              }
+              onZoomOut={() =>
+                session.setZoom((value) => clampZoom(value - ZOOM_STEP_VALUE))
+              }
+              tool={session.tool}
+              zoom={session.zoom}
+            />
+          </>
+        )}
+        {session.error ? (
           <p
             className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700"
             role="alert"
           >
-            {error}
+            {session.error}
           </p>
         ) : null}
-        {busy ? (
+        {session.busy ? (
           <p className="text-xs text-slate-500" role="status">
             正在处理本地图片…
           </p>
         ) : null}
       </aside>
 
-      <div className="min-w-0 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-          <div className="flex gap-1">
-            <button
-              className={
-                mode === "input" ? activeModeClass : inactiveModeClass
-              }
-              onClick={() => setMode("input")}
-              type="button"
-            >
-              输入 / 去底
-            </button>
-            <button
-              className={
-                mode === "binary" ? activeModeClass : inactiveModeClass
-              }
-              disabled={!editsAvailable}
-              onClick={() => setMode("binary")}
-              type="button"
-            >
-              黑白稿编辑
-            </button>
-          </div>
-          <span className="text-xs text-slate-500">
-            {mode === "input"
-              ? "点击背景区域指定要移除的颜色"
-              : "涂抹修整后自动保存"}
-          </span>
-        </div>
-
-        {signatureWarning ? (
+      <div className="min-w-0 w-full space-y-3 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden">
+        {session.signatureWarning ? (
           <p
             className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800"
             role="alert"
           >
-            {signatureWarning}
+            {session.signatureWarning}
           </p>
         ) : null}
 
-        {drawing ? (
-          <DrawingCanvas
-            onCancel={() => setDrawing(false)}
-            onCommit={handleDrawingCommit}
-          />
-        ) : mode === "input" ? (
-          <EditorCanvas
-            cutout={cutout}
-            onBackgroundSample={handleBackgroundSample}
-          />
-        ) : (
-          <BinaryEditorCanvas
-            disabled={!editsAvailable}
-            onStrokeEnd={handleStrokeEnd}
-            onStrokeMove={handleStrokeMove}
-            onStrokeStart={handleStrokeStart}
-            raster={finalBinary}
-            tool={tool}
-            zoom={zoom}
-          />
-        )}
+        <div className="min-h-0 w-full xl:flex xl:h-full xl:min-h-0 xl:flex-1 xl:overflow-hidden">
+          {session.mode === "input" ? (
+            <EditorCanvas
+              cutout={session.cutout}
+              eraserSize={imageState.imageEraserSize}
+              onBackgroundSample={session.handleBackgroundSample}
+              onCommitRaster={session.commitRasterEdit}
+              onRequestUpload={requestUpload}
+              tool={imageTool}
+            />
+          ) : (
+            <BinaryEditorCanvas
+              disabled={!session.editsAvailable}
+              onStrokeEnd={session.handleStrokeEnd}
+              onStrokeMove={session.handleStrokeMove}
+              onStrokeStart={session.handleStrokeStart}
+              raster={session.finalBinary}
+              tool={session.tool}
+              toolSize={
+                session.tool === "brush"
+                  ? binaryState.brushSize
+                  : binaryState.eraserSize
+              }
+              zoom={session.zoom}
+            />
+          )}
+        </div>
       </div>
 
-      {pendingChange ? (
+      {session.pendingChange ? (
         <div
           aria-label="重置手动修整确认"
           aria-modal="true"
@@ -558,14 +218,14 @@ export default function EditorWorkspace({
             <div className="mt-5 flex justify-end gap-2">
               <button
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
-                onClick={() => setPendingChange(null)}
+                onClick={session.cancelPendingReset}
                 type="button"
               >
                 取消
               </button>
               <button
                 className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-                onClick={confirmReset}
+                onClick={session.confirmReset}
                 type="button"
               >
                 确认重置
@@ -582,19 +242,3 @@ const activeModeClass =
   "rounded-md bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white";
 const inactiveModeClass =
   "rounded-md border border-slate-300 px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50";
-
-function clampZoom(value: number): number {
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
-}
-
-function fileErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    if (error.message === "unsupported-type") {
-      return "仅支持 PNG、JPEG 或 WebP";
-    }
-    if (error.message === "too-large") {
-      return "图片不能超过 10 MB";
-    }
-  }
-  return "图片无法读取，请重试";
-}

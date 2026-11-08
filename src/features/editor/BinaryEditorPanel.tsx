@@ -4,7 +4,13 @@ import type {
   SealOrientation,
   WorkBinaryEditState,
 } from "../../domain/types";
+import {
+  BORDER_MARGIN_STEP_MM,
+  MAX_BORDER_MARGIN_MM,
+  MIN_BORDER_MARGIN_MM,
+} from "../../domain/types";
 import type { EditTool } from "./binaryEditing";
+import ToolModuleHeading from "./ToolModuleHeading";
 
 interface BinaryEditorPanelProps {
   binaryState: WorkBinaryEditState;
@@ -40,9 +46,7 @@ export default function BinaryEditorPanel({
   return (
     <>
       <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-900">
-          05 黑白稿编辑
-        </h3>
+        <ToolModuleHeading icon="brush" title="手绘" />
         {disabled ? (
           <p className="mb-3 text-xs text-amber-700">
             请先生成黑白稿，再使用编辑工具
@@ -96,30 +100,49 @@ export default function BinaryEditorPanel({
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-500">当前缩放 {zoom}%</p>
-        <label className="mt-3 block text-xs text-slate-600">
-          画笔线宽 {binaryState.brushSize} px
-          <input
-            aria-label="画笔线宽"
-            className="mt-1 w-full accent-slate-900"
-            disabled={disabled}
-            max={32}
-            min={1}
-            onChange={(event) =>
-              onChange({
-                ...binaryState,
-                brushSize: clamp(Number(event.target.value), 1, 32),
-              })
-            }
-            type="range"
-            value={binaryState.brushSize}
-          />
-        </label>
+        {tool === "brush" ? (
+          <label className="mt-3 block text-xs text-slate-600">
+            画笔大小 {binaryState.brushSize} px
+            <input
+              aria-label="画笔大小"
+              className="mt-1 w-full accent-slate-900"
+              disabled={disabled}
+              max={32}
+              min={1}
+              onChange={(event) =>
+                onChange({
+                  ...binaryState,
+                  brushSize: clamp(Number(event.target.value), 1, 32),
+                })
+              }
+              type="range"
+              value={binaryState.brushSize}
+            />
+          </label>
+        ) : (
+          <label className="mt-3 block text-xs text-slate-600">
+            橡皮大小 {binaryState.eraserSize} px
+            <input
+              aria-label="橡皮大小"
+              className="mt-1 w-full accent-slate-900"
+              disabled={disabled}
+              max={32}
+              min={1}
+              onChange={(event) =>
+                onChange({
+                  ...binaryState,
+                  eraserSize: clamp(Number(event.target.value), 1, 32),
+                })
+              }
+              type="range"
+              value={binaryState.eraserSize}
+            />
+          </label>
+        )}
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-900">
-          06 阴 / 阳刻与边框
-        </h3>
+        <ToolModuleHeading icon="seal" title="阴 / 阳刻与边框" />
         <div className="grid grid-cols-2 gap-1.5">
           {(
             [
@@ -172,9 +195,7 @@ export default function BinaryEditorPanel({
             [
               ["none", "无边框"],
               ["single", "单线"],
-              ["thick", "粗线"],
               ["double", "双线"],
-              ["broken", "残破边"],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -196,6 +217,56 @@ export default function BinaryEditorPanel({
             </button>
           ))}
         </div>
+        {binaryState.borderStyle === "broken" ? (
+          <p className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+            历史残破边（只读兼容）
+          </p>
+        ) : null}
+        <label className="mt-3 block text-xs text-slate-600">
+          边框粗细 {binaryState.borderThickness}
+          <input
+            aria-label="边框粗细"
+            className="mt-1 w-full accent-slate-900"
+            disabled={
+              disabled ||
+              binaryState.borderStyle === "none" ||
+              binaryState.borderStyle === "broken"
+            }
+            max={8}
+            min={1}
+            onChange={(event) =>
+              onChange({
+                ...binaryState,
+                borderThickness: clamp(Number(event.target.value), 1, 8),
+              })
+            }
+            type="range"
+            value={binaryState.borderThickness}
+          />
+        </label>
+        <label className="mt-3 block text-xs text-slate-600">
+          外边距 {binaryState.borderMarginMm} mm
+          <input
+            aria-label="边框外边距"
+            className="mt-1 w-full accent-slate-900"
+            disabled={
+              disabled ||
+              binaryState.borderStyle === "none" ||
+              binaryState.borderStyle === "broken"
+            }
+            max={MAX_BORDER_MARGIN_MM}
+            min={MIN_BORDER_MARGIN_MM}
+            onChange={(event) =>
+              onChange({
+                ...binaryState,
+                borderMarginMm: clampMargin(Number(event.target.value)),
+              })
+            }
+            step={BORDER_MARGIN_STEP_MM}
+            type="range"
+            value={binaryState.borderMarginMm}
+          />
+        </label>
       </section>
     </>
   );
@@ -211,4 +282,12 @@ function clamp(value: number, min: number, max: number): number {
     return min;
   }
   return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function clampMargin(value: number): number {
+  const clamped = Math.min(
+    MAX_BORDER_MARGIN_MM,
+    Math.max(MIN_BORDER_MARGIN_MM, Number.isFinite(value) ? value : 0),
+  );
+  return Math.round(clamped * 10) / 10;
 }

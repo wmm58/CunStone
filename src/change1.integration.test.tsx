@@ -1,10 +1,37 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 import { FIXED_TEST_CODE } from "./features/auth/authService";
+import * as imageInput from "./features/editor/imageInput";
 import { readAppState } from "./lib/storage/appStorage";
+
+vi.mock("./features/editor/imageInput", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("./features/editor/imageInput")>();
+  return {
+    ...actual,
+    prepareSourceFile: vi.fn(),
+    prepareSourceDataUrl: vi.fn(),
+  };
+});
+
+const prepared = {
+  width: 2,
+  height: 2,
+  dataUrl: "data:image/png;base64,Y2hhbmdlMQ==",
+  raster: {
+    width: 2,
+    height: 2,
+    data: new Uint8ClampedArray([
+      255, 255, 255, 255,
+      0, 0, 0, 255,
+      0, 0, 0, 255,
+      255, 255, 255, 255,
+    ]),
+  },
+};
 
 async function loginWithUi(phone: string) {
   const user = userEvent.setup();
@@ -14,10 +41,26 @@ async function loginWithUi(phone: string) {
   return user;
 }
 
+async function uploadImage() {
+  fireEvent.change(screen.getByLabelText("上传图片"), {
+    target: {
+      files: [new File([new Uint8Array([1])], "sample.png", { type: "image/png" })],
+    },
+  });
+  await screen.findByLabelText("编辑画布");
+  await waitFor(() =>
+    expect(screen.queryByText("正在处理本地图片…")).not.toBeInTheDocument(),
+  );
+}
+
 describe("Change 1 integration", () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.location.hash = "#/login";
+    vi.mocked(imageInput.prepareSourceFile).mockReset();
+    vi.mocked(imageInput.prepareSourceDataUrl).mockReset();
+    vi.mocked(imageInput.prepareSourceFile).mockResolvedValue(prepared);
+    vi.mocked(imageInput.prepareSourceDataUrl).mockResolvedValue(prepared);
   });
 
   it("completes login, draft creation, account switch, and same-browser resume", async () => {
@@ -31,7 +74,10 @@ describe("Change 1 integration", () => {
     const nameInput = screen.getByLabelText("作品名称");
     await user.clear(nameInput);
     await user.type(nameInput, "跨页面恢复作品");
+    await uploadImage();
     await user.click(screen.getByRole("button", { name: "草稿" }));
+    await screen.findByRole("dialog", { name: "草稿已保存" });
+    await user.click(screen.getByRole("button", { name: "知道了" }));
 
     await waitFor(() => {
       expect(readAppState().state.works).toHaveLength(1);
@@ -40,8 +86,6 @@ describe("Change 1 integration", () => {
     const workHash = `#/editor/${work.id}`;
 
     await waitFor(() => expect(window.location.hash).toBe(workHash));
-    expect(await screen.findByLabelText("作品状态")).toHaveTextContent("草稿");
-
     await user.click(screen.getByRole("button", { name: "切换账号" }));
     await screen.findByRole("heading", { name: "登录 / 注册" });
     await loginWithUi("13800138000");
@@ -53,8 +97,7 @@ describe("Change 1 integration", () => {
     });
 
     expect(await screen.findByDisplayValue("跨页面恢复作品")).toBeVisible();
-    expect(screen.getByLabelText("作品状态")).toHaveTextContent("草稿");
-    expect(screen.getByText(/已保存/)).toBeVisible();
+    expect(screen.getByLabelText("作品名称")).toHaveValue("跨页面恢复作品");
   });
 
   it("does not expose one local account's work to another local account", async () => {
@@ -65,6 +108,7 @@ describe("Change 1 integration", () => {
     const nameInput = screen.getByLabelText("作品名称");
     await user.clear(nameInput);
     await user.type(nameInput, "账号一的作品");
+    await uploadImage();
     await user.click(screen.getByRole("button", { name: "草稿" }));
     await waitFor(() => expect(readAppState().state.works).toHaveLength(1));
     const workHash = `#/editor/${readAppState().state.works[0].id}`;
